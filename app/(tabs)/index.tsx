@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/context/ThemeContext';
+import SunArc from '@/components/SunArc';
 import {
   PRAYER_NAMES,
   PrayerName,
@@ -503,6 +504,11 @@ export default function PrayerTimesScreen() {
             ))}
           </View>
 
+          {/* ── Sun Arc ── */}
+          <View style={[styles.sunArcCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <SunArc timings={prayerData!.timings} now={now} />
+          </View>
+
           {/* ── Error banner (when data exists but a re-fetch failed) ── */}
           {status === 'error' && (
             <Text style={[styles.errorBanner, { color: '#E57373' }]}>{errorMsg}</Text>
@@ -637,6 +643,16 @@ const styles = StyleSheet.create({
     justifyContent:    'center',
   },
   searchBtnText: { fontSize: 14, fontWeight: '500', letterSpacing: 0.3 },
+
+  // Sun arc
+  sunArcCard: {
+    borderRadius:  18,
+    borderWidth:   1,
+    overflow:      'hidden',
+    marginBottom:  20,
+    paddingVertical: 14,
+    alignItems:    'center',
+  },
 
   errorBanner: { fontSize: 12, textAlign: 'center', marginBottom: 16 },
   methodNote:  { fontSize: 10, textAlign: 'center', letterSpacing: 0.5, marginTop: 4 },
