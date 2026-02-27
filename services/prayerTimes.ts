@@ -101,3 +101,59 @@ export function isPastPrayer(
   const cur = now.getHours() * 60 + now.getMinutes();
   return toMinutes(timings[name]) <= cur;
 }
+
+/** Seconds remaining until the given prayer (tomorrow if it has already passed). */
+export function getSecondsUntilPrayer(
+  prayer:  PrayerName,
+  timings: PrayerTimings,
+  now:     Date,
+): number {
+  const [h, m] = cleanTime(timings[prayer]).split(':').map(Number);
+  const target = new Date(now);
+  target.setHours(h, m, 0, 0);
+  if (target.getTime() <= now.getTime()) {
+    target.setDate(target.getDate() + 1); // Fajr after Isha → tomorrow
+  }
+  return Math.max(0, Math.floor((target.getTime() - now.getTime()) / 1000));
+}
+
+/** Format a seconds value as "H:MM:SS". */
+export function formatCountdown(totalSeconds: number): string {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = totalSeconds % 60;
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+/**
+ * 0–1 fraction of the current prayer period that has elapsed.
+ * 0 = the previous prayer just happened; 1 = the next prayer is now.
+ */
+export function getPrayerPeriodProgress(
+  timings:    PrayerTimings,
+  nextPrayer: PrayerName,
+  now:        Date,
+): number {
+  const nextIdx  = PRAYER_NAMES.indexOf(nextPrayer);
+  const prevName = PRAYER_NAMES[nextIdx === 0 ? PRAYER_NAMES.length - 1 : nextIdx - 1];
+  const nowMs    = now.getTime();
+
+  // Next prayer absolute ms (today or tomorrow if already past)
+  const [nh, nm] = cleanTime(timings[nextPrayer]).split(':').map(Number);
+  const nextBase = new Date(now);
+  nextBase.setHours(nh, nm, 0, 0);
+  const nextMs = nextBase.getTime() <= nowMs
+    ? nextBase.getTime() + 86_400_000
+    : nextBase.getTime();
+
+  // Previous prayer absolute ms (today or yesterday)
+  const [ph, pm] = cleanTime(timings[prevName]).split(':').map(Number);
+  const prevBase = new Date(now);
+  prevBase.setHours(ph, pm, 0, 0);
+  let prevMs = prevBase.getTime();
+  if (prevMs >= nextMs) prevMs -= 86_400_000;
+
+  const total   = nextMs - prevMs;
+  const elapsed = nowMs  - prevMs;
+  return Math.min(1, Math.max(0, elapsed / total));
+}

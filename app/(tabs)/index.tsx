@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -21,10 +22,14 @@ import {
   PRAYER_NAMES,
   PrayerName,
   PrayerTimesResult,
+  PrayerTimings,
   fetchByCity,
   fetchByCoords,
   formatTime,
+  formatCountdown,
   getNextPrayer,
+  getSecondsUntilPrayer,
+  getPrayerPeriodProgress,
   isPastPrayer,
 } from '@/services/prayerTimes';
 
@@ -43,7 +48,7 @@ const PRAYER_CONFIG: Record<PrayerName, { icon: string; label: string }> = {
   Dhuhr:   { icon: 'weather-sunny',          label: 'Dhuhr'   },
   Asr:     { icon: 'weather-partly-cloudy',  label: 'Asr'     },
   Maghrib: { icon: 'weather-sunset-down',    label: 'Maghrib' },
-  Isha:    { icon: 'moon-and-stars',         label: 'Isha'    },
+  Isha:    { icon: 'moon-waning-crescent',    label: 'Isha'    },
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -99,6 +104,150 @@ function PrayerCard({ name, time, isNext, isPast }: PrayerCardProps) {
   );
 }
 
+// ─── Countdown Block ──────────────────────────────────────────────────────────
+
+interface CountdownBlockProps {
+  nextPrayer: PrayerName;
+  timings:    PrayerTimings;
+  now:        Date;
+}
+
+function CountdownBlock({ nextPrayer, timings, now }: CountdownBlockProps) {
+  const { colors, palette } = useTheme();
+
+  // Pulsing dot animation
+  const pulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 0.3, duration: 800, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1.0, duration: 800, useNativeDriver: true }),
+      ]),
+    ).start();
+  }, [pulse]);
+
+  const seconds  = getSecondsUntilPrayer(nextPrayer, timings, now);
+  const progress = getPrayerPeriodProgress(timings, nextPrayer, now);
+
+  return (
+    <View style={[countdownStyles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      {/* Label row */}
+      <View style={countdownStyles.labelRow}>
+        <Animated.View style={[countdownStyles.dot, { backgroundColor: palette.gold, opacity: pulse }]} />
+        <Text style={[countdownStyles.label, { color: colors.textMuted }]}>
+          Next · <Text style={{ color: palette.gold }}>{nextPrayer}</Text>
+        </Text>
+      </View>
+
+      {/* Countdown digits */}
+      <Text style={[countdownStyles.digits, { color: colors.text }]}>
+        {formatCountdown(seconds)}
+      </Text>
+
+      {/* Progress bar */}
+      <View style={[countdownStyles.barTrack, { backgroundColor: colors.cardAlt }]}>
+        <View
+          style={[
+            countdownStyles.barFill,
+            { backgroundColor: palette.gold, flex: progress },
+          ]}
+        />
+        <View style={{ flex: 1 - progress }} />
+      </View>
+    </View>
+  );
+}
+
+const countdownStyles = StyleSheet.create({
+  container: {
+    borderRadius:   16,
+    borderWidth:    1,
+    padding:        18,
+    marginBottom:   20,
+  },
+  labelRow: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    gap:            7,
+    marginBottom:   6,
+  },
+  dot: {
+    width:        7,
+    height:       7,
+    borderRadius: 4,
+  },
+  label: {
+    fontSize:     12,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  digits: {
+    fontSize:     38,
+    fontFamily:   'SpaceMono',
+    fontWeight:   '300',
+    letterSpacing: 2,
+    marginBottom:  12,
+  },
+  barTrack: {
+    flexDirection:  'row',
+    height:         3,
+    borderRadius:   2,
+    overflow:       'hidden',
+  },
+  barFill: {
+    borderRadius: 2,
+  },
+});
+
+// ─── Ramadan Banner ───────────────────────────────────────────────────────────
+
+interface RamadanBannerProps {
+  timings:  PrayerTimings;
+  now:      Date;
+}
+
+function RamadanBanner({ timings, now }: RamadanBannerProps) {
+  const { colors, palette } = useTheme();
+
+  const curMinutes = now.getHours() * 60 + now.getMinutes();
+  // Before Fajr → show Suhoor ends; otherwise show Iftar
+  const fajrMins = (() => {
+    const [h, m] = timings.Fajr.split(':').map(Number);
+    return h * 60 + m;
+  })();
+  const isSuhoorTime = curMinutes < fajrMins;
+
+  const label = isSuhoorTime
+    ? `Suhoor ends · ${formatTime(timings.Fajr)}`
+    : `Iftar · ${formatTime(timings.Maghrib)}`;
+
+  return (
+    <View style={[ramadanStyles.banner, { backgroundColor: palette.goldDim, borderColor: palette.gold }]}>
+      <Text style={ramadanStyles.moon}>🌙</Text>
+      <View>
+        <Text style={[ramadanStyles.title, { color: palette.gold }]}>Ramadan Mubarak</Text>
+        <Text style={[ramadanStyles.sub, { color: colors.text }]}>{label}</Text>
+      </View>
+    </View>
+  );
+}
+
+const ramadanStyles = StyleSheet.create({
+  banner: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    gap:            12,
+    borderRadius:   14,
+    borderWidth:    1,
+    paddingVertical:   12,
+    paddingHorizontal: 16,
+    marginBottom:   20,
+  },
+  moon:  { fontSize: 24 },
+  title: { fontSize: 14, fontWeight: '600', letterSpacing: 0.3 },
+  sub:   { fontSize: 12, marginTop: 2, letterSpacing: 0.2 },
+});
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 type ScreenStatus = 'init' | 'loading' | 'error' | 'no_location' | 'success';
@@ -117,10 +266,10 @@ export default function PrayerTimesScreen() {
   const [countryInput, setCountryInput] = useState('');
   const [searching,    setSearching]    = useState(false);
 
-  // Live "now" — updates every minute so the NEXT badge moves automatically
+  // Live "now" — updates every second for the countdown timer
   const [now, setNow] = useState(new Date());
   useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 60_000);
+    const t = setInterval(() => setNow(new Date()), 1_000);
     return () => clearInterval(t);
   }, []);
 
@@ -330,6 +479,16 @@ export default function PrayerTimesScreen() {
             </Text>
             <Text style={[styles.dateHijri, { color: palette.gold }]}>{hijri}</Text>
           </View>
+
+          {/* ── Ramadan banner ── */}
+          {prayerData?.date.hijri.month.number === 9 && (
+            <RamadanBanner timings={prayerData.timings} now={now} />
+          )}
+
+          {/* ── Countdown ── */}
+          {nextPrayer && prayerData && (
+            <CountdownBlock nextPrayer={nextPrayer} timings={prayerData.timings} now={now} />
+          )}
 
           {/* ── Prayer cards ── */}
           <View style={styles.cards}>
