@@ -1,0 +1,263 @@
+{
+  "categories": [
+    {
+      "id": "morning-evening",
+      "title": "Morning & Evening",
+      "icon": "weather-sunset",
+      "duas": [
+        {
+          "id": "me-01",
+          "arabic": "أَصْبَحْنَا وَأَصْبَحَ الْمُلْكُ لِلَّهِ، وَالْحَمْدُ لِلَّهِ، لَا إِلَهَ إِلَّا اللهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ",
+          "transliteration": "Aṣbaḥnā wa aṣbaḥal mulku lillāh, wal-ḥamdu lillāh, lā ilāha illallāhu waḥdahu lā sharīka lah, lahul mulku wa lahul ḥamdu wa huwa 'alā kulli shay'in qadīr.",
+          "english": "We have reached the morning and at this very time sovereignty belongs to Allah. All praise is for Allah. None has the right to be worshipped except Allah, alone, without partner, to Him belongs all sovereignty and all praise, and He is over all things omnipotent.",
+          "reference": "Abu Dawud 4/317"
+        },
+        {
+          "id": "me-02",
+          "arabic": "اللَّهُمَّ بِكَ أَصْبَحْنَا، وَبِكَ أَمْسَيْنَا، وَبِكَ نَحْيَا، وَبِكَ نَمُوتُ، وَإِلَيْكَ النُّشُورُ",
+          "transliteration": "Allāhumma bika aṣbaḥnā, wa bika amsaynā, wa bika naḥyā, wa bika namūtu, wa ilayka'n-nushūr.",
+          "english": "O Allah, by Your leave we have reached the morning and by Your leave we have reached the evening, by Your leave we live and die, and unto You is our resurrection.",
+          "reference": "At-Tirmidhi 5/466"
+        },
+        {
+          "id": "me-03",
+          "arabic": "سُبْحَانَ اللهِ وَبِحَمْدِهِ",
+          "transliteration": "Subḥānallāhi wa biḥamdih.",
+          "english": "Glory is to Allah and praise is to Him. (Recited 100 times in the morning and evening; sins are forgiven even if they are like the foam of the sea.)",
+          "reference": "Muslim 4/2071"
+        },
+        {
+          "id": "me-04",
+          "arabic": "أَعُوذُ بِكَلِمَاتِ اللهِ التَّامَّاتِ مِنْ شَرِّ مَا خَلَقَ",
+          "transliteration": "A'ūdhu bi kalimātillāhit-tāmmāti min sharri mā khalaq.",
+          "english": "I seek refuge in the perfect words of Allah from the evil of what He has created. (Recited 3 times in the evening; no harm will befall the one who recites it.)",
+          "reference": "Muslim 4/2080"
+        },
+        {
+          "id": "me-05",
+          "arabic": "اللَّهُمَّ عَافِنِي فِي بَدَنِي، اللَّهُمَّ عَافِنِي فِي سَمْعِي، اللَّهُمَّ عَافِنِي فِي بَصَرِي، لَا إِلَهَ إِلَّا أَنْتَ",
+          "transliteration": "Allāhumma 'āfinī fī badanī, Allāhumma 'āfinī fī sam'ī, Allāhumma 'āfinī fī baṣarī, lā ilāha illā ant.",
+          "english": "O Allah, grant my body health, O Allah, grant my hearing health, O Allah, grant my sight health. None has the right to be worshipped except You.",
+          "reference": "Abu Dawud 4/324"
+        }
+      ]
+    },
+    {
+      "id": "eating",
+      "title": "Before & After Eating",
+      "icon": "food-variant",
+      "duas": [
+        {
+          "id": "ea-01",
+          "arabic": "بِسْمِ اللهِ",
+          "transliteration": "Bismillāh.",
+          "english": "In the name of Allah. (Say before beginning to eat.)",
+          "reference": "Abu Dawud 3/347"
+        },
+        {
+          "id": "ea-02",
+          "arabic": "بِسْمِ اللهِ أَوَّلَهُ وَآخِرَهُ",
+          "transliteration": "Bismillāhi awwalahu wa ākhirah.",
+          "english": "In the name of Allah at its beginning and its end. (If one forgets to say Bismillah at the start, recite this upon remembering.)",
+          "reference": "Abu Dawud 3/347"
+        },
+        {
+          "id": "ea-03",
+          "arabic": "اللَّهُمَّ بَارِكْ لَنَا فِيمَا رَزَقْتَنَا وَقِنَا عَذَابَ النَّارِ",
+          "transliteration": "Allāhumma bārik lanā fīmā razaqtanā wa qinā 'adhāban-nār.",
+          "english": "O Allah, bless what You have provided us and protect us from the punishment of the Fire.",
+          "reference": "Ibn As-Sunni 459"
+        },
+        {
+          "id": "ea-04",
+          "arabic": "الْحَمْدُ لِلَّهِ الَّذِي أَطْعَمَنَا وَسَقَانَا وَجَعَلَنَا مُسْلِمِينَ",
+          "transliteration": "Alḥamdu lillāhil-ladhī aṭ'amanā wa saqānā wa ja'alanā muslimīn.",
+          "english": "All praise is for Allah Who has given us food and drink, and made us Muslims.",
+          "reference": "Abu Dawud 3/357, At-Tirmidhi 5/507"
+        },
+        {
+          "id": "ea-05",
+          "arabic": "اللَّهُمَّ أَطْعِمْ مَنْ أَطْعَمَنِي، وَاسْقِ مَنْ سَقَانِي",
+          "transliteration": "Allāhumma aṭ'im man aṭ'amanī, wasqi man saqānī.",
+          "english": "O Allah, feed the one who has fed me and give drink to the one who has given me drink.",
+          "reference": "Muslim 3/126"
+        }
+      ]
+    },
+    {
+      "id": "home",
+      "title": "Entering & Leaving Home",
+      "icon": "home-outline",
+      "duas": [
+        {
+          "id": "ho-01",
+          "arabic": "بِسْمِ اللهِ تَوَكَّلْتُ عَلَى اللهِ، لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللهِ",
+          "transliteration": "Bismillāh, tawakkaltu 'alallāh, lā ḥawla wa lā quwwata illā billāh.",
+          "english": "In the name of Allah, I place my trust in Allah, and there is no might nor power except with Allah.",
+          "reference": "Abu Dawud 4/325, At-Tirmidhi 5/490"
+        },
+        {
+          "id": "ho-02",
+          "arabic": "بِسْمِ اللهِ وَلَجْنَا، وَبِسْمِ اللهِ خَرَجْنَا، وَعَلَى اللهِ رَبِّنَا تَوَكَّلْنَا",
+          "transliteration": "Bismillāhi walajna, wa bismillāhi kharajnā, wa 'alallāhi rabbinā tawakkalnā.",
+          "english": "In the name of Allah we enter, in the name of Allah we leave, and upon Allah our Lord we place our trust.",
+          "reference": "Abu Dawud 4/325"
+        },
+        {
+          "id": "ho-03",
+          "arabic": "اللَّهُمَّ إِنِّي أَسْأَلُكَ خَيْرَ الْمَوْلَجِ وَخَيْرَ الْمَخْرَجِ، بِسْمِ اللهِ وَلَجْنَا وَبِسْمِ اللهِ خَرَجْنَا وَعَلَى اللهِ رَبِّنَا تَوَكَّلْنَا",
+          "transliteration": "Allāhumma innī as'aluka khayral-mawlaji wa khayral-makhraji, bismillāhi walajna wa bismillāhi kharajnā wa 'alallāhi rabbinā tawakkalnā.",
+          "english": "O Allah, I ask You for the best of entrances and the best of exits. In the name of Allah we enter, in the name of Allah we leave, and upon Allah our Lord we place our trust.",
+          "reference": "Abu Dawud 4/325"
+        }
+      ]
+    },
+    {
+      "id": "sleep",
+      "title": "Before & After Sleep",
+      "icon": "weather-night",
+      "duas": [
+        {
+          "id": "sl-01",
+          "arabic": "بِاسْمِكَ اللَّهُمَّ أَمُوتُ وَأَحْيَا",
+          "transliteration": "Bismika Allāhumma amūtu wa aḥyā.",
+          "english": "In Your name O Allah, I die and I live.",
+          "reference": "Al-Bukhari 11/113"
+        },
+        {
+          "id": "sl-02",
+          "arabic": "اللَّهُمَّ قِنِي عَذَابَكَ يَوْمَ تَبْعَثُ عِبَادَكَ",
+          "transliteration": "Allāhumma qinī 'adhābaka yawma tab'athu 'ibādak.",
+          "english": "O Allah, protect me from Your punishment on the Day You resurrect Your servants. (Recited 3 times before sleeping.)",
+          "reference": "Abu Dawud 4/311"
+        },
+        {
+          "id": "sl-03",
+          "arabic": "اللَّهُمَّ بِاسْمِكَ أَحْيَا وَأَمُوتُ",
+          "transliteration": "Allāhumma bismika aḥyā wa amūt.",
+          "english": "O Allah, in Your name I live and I die.",
+          "reference": "Al-Bukhari 11/113"
+        },
+        {
+          "id": "sl-04",
+          "arabic": "الْحَمْدُ لِلَّهِ الَّذِي أَحْيَانَا بَعْدَ مَا أَمَاتَنَا وَإِلَيْهِ النُّشُورُ",
+          "transliteration": "Alḥamdu lillāhil-ladhī aḥyānā ba'da mā amātanā wa ilayhin-nushūr.",
+          "english": "All praise is for Allah Who gave us life after having taken it from us, and unto Him is the resurrection.",
+          "reference": "Al-Bukhari 11/113"
+        },
+        {
+          "id": "sl-05",
+          "arabic": "سُبْحَانَكَ اللَّهُمَّ وَبِحَمْدِكَ، أَشْهَدُ أَنْ لَا إِلَهَ إِلَّا أَنْتَ، أَسْتَغْفِرُكَ وَأَتُوبُ إِلَيْكَ",
+          "transliteration": "Subḥānaka Allāhumma wa biḥamdika, ashhadu an lā ilāha illā anta, astaghfiruka wa atūbu ilayk.",
+          "english": "Glory is to You, O Allah, and praise is to You. I bear witness that none has the right to be worshipped except You. I seek Your forgiveness and repent unto You.",
+          "reference": "At-Tirmidhi 3/153"
+        }
+      ]
+    },
+    {
+      "id": "prayer",
+      "title": "Prayer & Worship",
+      "icon": "mosque",
+      "duas": [
+        {
+          "id": "pr-01",
+          "arabic": "اللَّهُمَّ أَعِنِّي عَلَى ذِكْرِكَ وَشُكْرِكَ وَحُسْنِ عِبَادَتِكَ",
+          "transliteration": "Allāhumma a'innī 'alā dhikrika wa shukrika wa ḥusni 'ibādatik.",
+          "english": "O Allah, help me to remember You, to give thanks to You, and to worship You in an excellent manner.",
+          "reference": "Abu Dawud 2/86, An-Nasa'i 3/53"
+        },
+        {
+          "id": "pr-02",
+          "arabic": "رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الْآخِرَةِ حَسَنَةً وَقِنَا عَذَابَ النَّارِ",
+          "transliteration": "Rabbanā ātinā fid-dunyā ḥasanatan wa fil-ākhirati ḥasanatan wa qinā 'adhāban-nār.",
+          "english": "Our Lord, give us good in this world and good in the Hereafter, and protect us from the punishment of the Fire.",
+          "reference": "Al-Bukhari 6/52, Muslim 4/2070 | Quran 2:201"
+        },
+        {
+          "id": "pr-03",
+          "arabic": "رَبِّ اجْعَلْنِي مُقِيمَ الصَّلَاةِ وَمِن ذُرِّيَّتِي ۚ رَبَّنَا وَتَقَبَّلْ دُعَاءِ",
+          "transliteration": "Rabbi-j'alnī muqīmaṣ-ṣalāti wa min dhurriyyatī, Rabbanā wa taqabbal du'ā'.",
+          "english": "My Lord, make me an establisher of prayer, and [many] from my descendants. Our Lord, and accept my supplication.",
+          "reference": "Quran 14:40"
+        },
+        {
+          "id": "pr-04",
+          "arabic": "رَبِّ زِدْنِي عِلْمًا",
+          "transliteration": "Rabbi zidnī 'ilmā.",
+          "english": "My Lord, increase me in knowledge.",
+          "reference": "Quran 20:114"
+        }
+      ]
+    },
+    {
+      "id": "travel",
+      "title": "Travel",
+      "icon": "airplane",
+      "duas": [
+        {
+          "id": "tr-01",
+          "arabic": "سُبْحَانَ الَّذِي سَخَّرَ لَنَا هَٰذَا وَمَا كُنَّا لَهُ مُقْرِنِينَ، وَإِنَّا إِلَىٰ رَبِّنَا لَمُنقَلِبُونَ",
+          "transliteration": "Subḥānal-ladhī sakhkhara lanā hādhā wa mā kunnā lahu muqrinīn, wa innā ilā rabbinā lamunqalibūn.",
+          "english": "Glory is to Him Who has provided this for us, though we could never have had it by our efforts. Surely, unto our Lord we are returning.",
+          "reference": "Abu Dawud 3/34, At-Tirmidhi 5/501 | Quran 43:13-14"
+        },
+        {
+          "id": "tr-02",
+          "arabic": "اللَّهُمَّ هَوِّنْ عَلَيْنَا سَفَرَنَا هَذَا وَاطْوِ عَنَّا بُعْدَهُ، اللَّهُمَّ أَنْتَ الصَّاحِبُ فِي السَّفَرِ وَالْخَلِيفَةُ فِي الْأَهْلِ",
+          "transliteration": "Allāhumma hawwin 'alaynā safaranā hādhā waṭwi 'annā bu'dah. Allāhumma antas-ṣāḥibu fis-safari wal-khalīfatu fil-ahl.",
+          "english": "O Allah, make this journey easy for us and make its distance short. O Allah, You are our Companion on the road and the One in Whose care we leave our family.",
+          "reference": "Muslim 2/978"
+        },
+        {
+          "id": "tr-03",
+          "arabic": "آيِبُونَ تَائِبُونَ عَابِدُونَ لِرَبِّنَا حَامِدُونَ",
+          "transliteration": "Āybūna, tā'ibūna, 'ābidūna, li-rabbinā ḥāmidūn.",
+          "english": "We return, repent, worship, and praise our Lord. (Recited when returning from a journey.)",
+          "reference": "Muslim 2/980"
+        }
+      ]
+    },
+    {
+      "id": "general",
+      "title": "General Supplications",
+      "icon": "hands-pray",
+      "duas": [
+        {
+          "id": "ge-01",
+          "arabic": "اللَّهُمَّ أَنْتَ رَبِّي لَا إِلَهَ إِلَّا أَنْتَ، خَلَقْتَنِي وَأَنَا عَبْدُكَ، وَأَنَا عَلَى عَهْدِكَ وَوَعْدِكَ مَا اسْتَطَعْتُ، أَعُوذُ بِكَ مِنْ شَرِّ مَا صَنَعْتُ، أَبُوءُ لَكَ بِنِعْمَتِكَ عَلَيَّ، وَأَبُوءُ بِذَنْبِي فَاغْفِرْ لِي فَإِنَّهُ لَا يَغْفِرُ الذُّنُوبَ إِلَّا أَنْتَ",
+          "transliteration": "Allāhumma anta rabbī lā ilāha illā ant, khalaqtanī wa anā 'abduk, wa anā 'alā 'ahdika wa wa'dika mastaṭa't, a'ūdhu bika min sharri mā ṣana't, abū'u laka bini'matika 'alayya, wa abū'u bidhambī faghfir lī fa'innahū lā yaghfirudh-dhunūba illā ant.",
+          "english": "O Allah, You are my Lord, none has the right to be worshipped except You. You created me and I am Your servant, and I abide by Your covenant and promise as best I can. I seek refuge in You from the evil of what I have done. I acknowledge Your favour upon me and I acknowledge my sin, so forgive me, for verily none can forgive sins except You.",
+          "reference": "Al-Bukhari 7/150 — Sayyid al-Istighfar (Master of Seeking Forgiveness)"
+        },
+        {
+          "id": "ge-02",
+          "arabic": "رَبَّنَا لَا تُزِغْ قُلُوبَنَا بَعْدَ إِذْ هَدَيْتَنَا وَهَبْ لَنَا مِن لَّدُنكَ رَحْمَةً ۚ إِنَّكَ أَنتَ الْوَهَّابُ",
+          "transliteration": "Rabbanā lā tuzigh qulūbanā ba'da idh hadaytanā wa hab lanā min ladunka raḥmah, innaka antal-wahhāb.",
+          "english": "Our Lord, let not our hearts deviate after You have guided us and grant us from Yourself mercy. Indeed, You are the Bestower.",
+          "reference": "Quran 3:8"
+        },
+        {
+          "id": "ge-03",
+          "arabic": "رَبِّ اشْرَحْ لِي صَدْرِي، وَيَسِّرْ لِي أَمْرِي، وَاحْلُلْ عُقْدَةً مِّن لِّسَانِي، يَفْقَهُوا قَوْلِي",
+          "transliteration": "Rabbi-shraḥ lī ṣadrī, wa yassir lī amrī, waḥlul 'uqdatan min lisānī, yafqahū qawlī.",
+          "english": "My Lord, expand for me my breast [with assurance] and ease for me my task, and untie the knot from my tongue that they may understand my speech.",
+          "reference": "Quran 20:25-28"
+        },
+        {
+          "id": "ge-04",
+          "arabic": "لَا إِلَهَ إِلَّا أَنتَ سُبْحَانَكَ إِنِّي كُنتُ مِنَ الظَّالِمِينَ",
+          "transliteration": "Lā ilāha illā anta subḥānaka innī kuntu minaẓ-ẓālimīn.",
+          "english": "There is none worthy of worship except You, glory be to You. Indeed, I have been of the wrongdoers. (Dua of Prophet Yunus, known to relieve distress.)",
+          "reference": "Quran 21:87, At-Tirmidhi 5/529"
+        },
+        {
+          "id": "ge-05",
+          "arabic": "حَسْبُنَا اللهُ وَنِعْمَ الْوَكِيلُ",
+          "transliteration": "Ḥasbunallāhu wa ni'mal-wakīl.",
+          "english": "Allah is Sufficient for us, and He is the Best Disposer of affairs.",
+          "reference": "Quran 3:173, Al-Bukhari 5/172"
+        }
+      ]
+    }
+  ]
+}

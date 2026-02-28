@@ -64,6 +64,12 @@ export default function MoreScreen() {
           onPress={() => router.push('/more/hadith')}
         />
 
+        <MenuRow
+          icon="hands-pray"
+          label="Daily Duas"
+          onPress={() => router.push('/more/duas')}
+        />
+
         {/* ── Appearance ── */}
         <SectionLabel title="APPEARANCE" />
 
