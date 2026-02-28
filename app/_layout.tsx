@@ -47,6 +47,7 @@ function RootLayoutNav() {
         <Stack.Screen name="(tabs)"        options={{ headerShown: false }} />
         <Stack.Screen name="more/hadith"   options={{ headerShown: false }} />
         <Stack.Screen name="more/duas"    options={{ headerShown: false }} />
+        <Stack.Screen name="quran/[surah]" options={{ headerShown: false }} />
         <Stack.Screen name="modal"         options={{ presentation: 'modal' }} />
       </Stack>
     </NavThemeProvider>
