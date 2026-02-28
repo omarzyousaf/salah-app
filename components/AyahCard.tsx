@@ -158,8 +158,7 @@ const styles = StyleSheet.create({
 
   // Arabic — large, right-aligned, RTL
   arabic: {
-    fontFamily:       Platform.OS === 'ios' ? 'GeezaPro' : 'serif',
-    // ↑ Replace with 'Amiri' once font is loaded (see file header comment)
+    fontFamily:       'Amiri',
     fontSize:         26,
     lineHeight:       48,
     textAlign:        'right',

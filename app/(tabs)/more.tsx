@@ -46,7 +46,7 @@ function MenuRow({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function MoreScreen() {
-  const { colors, palette, isDark, mode, toggleTheme, setMode } = useTheme();
+  const { colors, palette, isDark, toggleTheme } = useTheme();
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
@@ -76,9 +76,16 @@ export default function MoreScreen() {
           onPress={() => router.push('/more/chat')}
         />
 
-        {/* ── Appearance ── */}
-        <SectionLabel title="APPEARANCE" />
+        {/* ── Preferences ── */}
+        <SectionLabel title="PREFERENCES" />
 
+        <MenuRow
+          icon="cog-outline"
+          label="Settings"
+          onPress={() => router.push('/more/settings')}
+        />
+
+        {/* Quick dark-mode toggle */}
         <MenuRow
           icon="theme-light-dark"
           label="Dark Mode"
@@ -86,41 +93,11 @@ export default function MoreScreen() {
             <Switch
               value={isDark}
               onValueChange={toggleTheme}
-              trackColor={{ false: colors.cardAlt, true: `rgba(200,169,110,0.4)` }}
+              trackColor={{ false: colors.cardAlt, true: `rgba(200,169,110,0.40)` }}
               thumbColor={isDark ? palette.gold : colors.tabInactive}
             />
           }
         />
-
-        <View style={[styles.row, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={[styles.iconWrap, { backgroundColor: colors.cardAlt }]}>
-            <MaterialCommunityIcons name="palette-outline" size={18} color={palette.gold} />
-          </View>
-          <Text style={[styles.rowLabel, { color: colors.text }]}>Theme</Text>
-          <View style={styles.segmented}>
-            {(['light', 'dark', 'system'] as const).map((m) => (
-              <TouchableOpacity
-                key={m}
-                style={[
-                  styles.seg,
-                  { borderColor: colors.border },
-                  mode === m && { backgroundColor: palette.gold, borderColor: palette.gold },
-                ]}
-                onPress={() => setMode(m)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.segText,
-                    { color: mode === m ? '#111' : colors.textMuted },
-                  ]}
-                >
-                  {m.charAt(0).toUpperCase() + m.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
 
         {/* ── About ── */}
         <SectionLabel title="ABOUT" />
@@ -174,25 +151,15 @@ const styles = StyleSheet.create({
   iconWrap: { width: 32, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   rowLabel: { flex: 1, fontSize: 15, letterSpacing: 0.2 },
 
-  // Segmented control
-  segmented:  { flexDirection: 'row', gap: 4 },
-  seg: {
-    paddingHorizontal: 10,
-    paddingVertical:   5,
-    borderRadius:      8,
-    borderWidth:       1,
-  },
-  segText: { fontSize: 11, fontWeight: '500', letterSpacing: 0.2 },
-
   // About card
   aboutCard: {
-    borderRadius:  16,
-    borderWidth:   1,
-    alignItems:    'center',
-    paddingVertical: 24,
+    borderRadius:      16,
+    borderWidth:       1,
+    alignItems:        'center',
+    paddingVertical:   24,
     paddingHorizontal: 20,
-    marginBottom:  16,
-    marginTop:     8,
+    marginBottom:      16,
+    marginTop:         8,
   },
   aboutDivider: { flexDirection: 'row', alignItems: 'center', width: '50%', marginVertical: 12 },
   divLine:      { flex: 1, height: 1 },

@@ -283,10 +283,10 @@ export default function TrackerScreen() {
                   ]}
                   activeOpacity={0.75}
                 >
-                  <Text style={[styles.pillTop, { color: isSel ? '#111' : colors.textMuted }]}>
+                  <Text style={[styles.pillTop, { color: isSel ? palette.onGold : colors.textMuted }]}>
                     {label}
                   </Text>
-                  <Text style={[styles.pillBot, { color: isSel ? '#333' : colors.tabInactive }]}>
+                  <Text style={[styles.pillBot, { color: isSel ? palette.onGold : colors.tabInactive }]}>
                     {sub}
                   </Text>
                 </TouchableOpacity>

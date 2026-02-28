@@ -34,11 +34,15 @@ import {
   getPrayerPeriodProgress,
   isPastPrayer,
 } from '@/services/prayerTimes';
+import {
+  type PrayerMethodId,
+  PRAYER_METHODS,
+  getSettings,
+} from '@/services/settings';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const LOCATION_KEY = 'salah_location';
-const METHOD       = 2; // ISNA
 
 type SavedLocation =
   | { type: 'gps';  lat: number; lon: number; label: string }
@@ -258,10 +262,11 @@ export default function PrayerTimesScreen() {
   const { colors, palette, isDark } = useTheme();
 
   // Screen state
-  const [status,    setStatus]    = useState<ScreenStatus>('init');
-  const [errorMsg,  setErrorMsg]  = useState('');
-  const [prayerData, setPrayerData] = useState<PrayerTimesResult | null>(null);
-  const [location,  setLocation]  = useState<SavedLocation | null>(null);
+  const [status,       setStatus]       = useState<ScreenStatus>('init');
+  const [errorMsg,     setErrorMsg]     = useState('');
+  const [prayerData,   setPrayerData]   = useState<PrayerTimesResult | null>(null);
+  const [location,     setLocation]     = useState<SavedLocation | null>(null);
+  const [method,       setMethod]       = useState<PrayerMethodId>(2);
 
   // Search form
   const [cityInput,    setCityInput]    = useState('');
@@ -275,30 +280,35 @@ export default function PrayerTimesScreen() {
     return () => clearInterval(t);
   }, []);
 
-  // ── Load saved location on mount ─────────────────────────────────────────
+  // ── Load saved location + settings on mount ──────────────────────────────
 
   useEffect(() => {
-    AsyncStorage.getItem(LOCATION_KEY).then((raw) => {
+    Promise.all([
+      AsyncStorage.getItem(LOCATION_KEY),
+      getSettings(),
+    ]).then(([raw, s]) => {
+      setMethod(s.prayerMethod);
       if (raw) {
         const saved = JSON.parse(raw) as SavedLocation;
         setLocation(saved);
-        fetchAndSet(saved);
+        fetchAndSet(saved, s.prayerMethod);
       } else {
         setStatus('no_location');
       }
     });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Fetch + store ─────────────────────────────────────────────────────────
 
-  async function fetchAndSet(loc: SavedLocation) {
+  async function fetchAndSet(loc: SavedLocation, m?: PrayerMethodId) {
     setStatus('loading');
     setErrorMsg('');
+    const activeMethod = m ?? method;
     try {
       const data =
         loc.type === 'gps'
-          ? await fetchByCoords(loc.lat, loc.lon, METHOD)
-          : await fetchByCity(loc.city, loc.country, METHOD);
+          ? await fetchByCoords(loc.lat, loc.lon, activeMethod)
+          : await fetchByCity(loc.city, loc.country, activeMethod);
       setPrayerData(data);
       setStatus('success');
       // Persist location
@@ -406,7 +416,7 @@ export default function PrayerTimesScreen() {
         </Text>
 
         {status === 'error' && (
-          <Text style={[styles.errorBanner, { color: '#E57373' }]}>{errorMsg}</Text>
+          <Text style={[styles.errorBanner, { color: colors.danger }]}>{errorMsg}</Text>
         )}
 
         <TouchableOpacity
@@ -414,8 +424,8 @@ export default function PrayerTimesScreen() {
           onPress={handleGPS}
           activeOpacity={0.8}
         >
-          <MaterialCommunityIcons name="crosshairs-gps" size={18} color="#111" />
-          <Text style={styles.gpsBtnText}>Use GPS</Text>
+          <MaterialCommunityIcons name="crosshairs-gps" size={18} color={palette.onGold} />
+          <Text style={[styles.gpsBtnText, { color: palette.onGold }]}>Use GPS</Text>
         </TouchableOpacity>
 
         <Text style={[styles.orDivider, { color: colors.textMuted }]}>— or —</Text>
@@ -521,7 +531,7 @@ export default function PrayerTimesScreen() {
 
           {/* ── Error banner (when data exists but a re-fetch failed) ── */}
           {status === 'error' && (
-            <Text style={[styles.errorBanner, { color: '#E57373' }]}>{errorMsg}</Text>
+            <Text style={[styles.errorBanner, { color: colors.danger }]}>{errorMsg}</Text>
           )}
 
           {/* ── Change location ── */}
@@ -531,8 +541,8 @@ export default function PrayerTimesScreen() {
               onPress={handleGPS}
               activeOpacity={0.8}
             >
-              <MaterialCommunityIcons name="crosshairs-gps" size={16} color="#111" />
-              <Text style={styles.gpsBtnText}>Use GPS</Text>
+              <MaterialCommunityIcons name="crosshairs-gps" size={16} color={palette.onGold} />
+              <Text style={[styles.gpsBtnText, { color: palette.onGold }]}>Use GPS</Text>
             </TouchableOpacity>
 
             <Text style={[styles.orDivider, { color: colors.textMuted }]}>— or search —</Text>
@@ -572,7 +582,7 @@ export default function PrayerTimesScreen() {
 
           {/* ── Method note ── */}
           <Text style={[styles.methodNote, { color: colors.tabInactive }]}>
-            ISNA calculation method (method 2)
+            {PRAYER_METHODS.find(m => m.id === method)?.label ?? 'ISNA'} calculation method · change in Settings
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -630,7 +640,7 @@ const styles = StyleSheet.create({
     borderRadius:   50,
     marginBottom:   16,
   },
-  gpsBtnText: { fontSize: 14, fontWeight: '600', color: '#111', letterSpacing: 0.3 },
+  gpsBtnText: { fontSize: 14, fontWeight: '600', letterSpacing: 0.3 },
 
   orDivider: { fontSize: 11, letterSpacing: 0.5, marginBottom: 14 },
 

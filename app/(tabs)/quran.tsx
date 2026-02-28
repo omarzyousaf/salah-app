@@ -135,7 +135,7 @@ function SurahRow({
                     color:
                       surah.revelationType === 'Meccan'
                         ? palette.gold
-                        : '#2D6A4F',
+                        : palette.greenLight,
                   },
                 ]}
               >

@@ -29,6 +29,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/context/ThemeContext';
 import { ayahAudioUrl, type AyahItem } from '@/services/quran';
+import { getSettings } from '@/services/settings';
 
 // ─── Reciter definitions ──────────────────────────────────────────────────────
 
@@ -96,6 +97,17 @@ export default function AudioPlayer({ ayahs, onAyahChange }: Props) {
   const [currentIdx,  setCurrentIdx]  = useState(0);
   const [reciter,     setReciter]     = useState<ReciterId>('ar.alafasy');
   const [reciterOpen, setReciterOpen] = useState(false);
+
+  // Load default reciter from settings on mount
+  useEffect(() => {
+    getSettings().then(s => {
+      if (RECITERS.some(r => r.id === s.reciter)) {
+        reciterRef.current = s.reciter as ReciterId;
+        setReciter(s.reciter as ReciterId);
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [hasStarted,  setHasStarted]  = useState(false);
   const [trackWidth,  setTrackWidth]  = useState(0);
 

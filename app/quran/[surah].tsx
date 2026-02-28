@@ -120,7 +120,7 @@ function SurahInfoHeader({ detail }: { detail: SurahDetail }) {
           <Text
             style={[
               infoStyles.chipText,
-              { color: detail.revelationType === 'Meccan' ? palette.gold : '#2D6A4F' },
+              { color: detail.revelationType === 'Meccan' ? palette.gold : palette.greenLight },
             ]}
           >
             {detail.revelationType}
@@ -208,7 +208,7 @@ function JumpModal({
             onPress={onJump}
             activeOpacity={0.8}
           >
-            <Text style={jumpStyles.btnText}>Go</Text>
+            <Text style={[jumpStyles.btnText, { color: palette.onGold }]}>Go</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -238,7 +238,7 @@ const jumpStyles = StyleSheet.create({
     letterSpacing:     0.5,
   },
   btn:     { height: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  btnText: { color: '#111', fontWeight: '700', fontSize: 15, letterSpacing: 0.3 },
+  btnText: { fontWeight: '700', fontSize: 15, letterSpacing: 0.3 },
 });
 
 // ─── Main screen ──────────────────────────────────────────────────────────────

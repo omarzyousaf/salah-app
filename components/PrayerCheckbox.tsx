@@ -97,7 +97,7 @@ export default function PrayerCheckbox({ name, checked, onToggle, loading, isLas
       >
         {loading ? (
           <Animated.View style={{ opacity: 0.6 }}>
-            <Ionicons name="ellipsis-horizontal" size={12} color={checked ? '#111' : colors.tabInactive} />
+            <Ionicons name="ellipsis-horizontal" size={12} color={checked ? palette.onGold : colors.tabInactive} />
           </Animated.View>
         ) : (
           <Animated.View
@@ -106,7 +106,7 @@ export default function PrayerCheckbox({ name, checked, onToggle, loading, isLas
               opacity:   checkAnim,
             }}
           >
-            <Ionicons name="checkmark" size={15} color="#111" />
+            <Ionicons name="checkmark" size={15} color={palette.onGold} />
           </Animated.View>
         )}
       </View>

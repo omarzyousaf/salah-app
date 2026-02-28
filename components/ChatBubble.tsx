@@ -133,7 +133,7 @@ export default function ChatBubble({ message, isStreaming = false }: Props) {
     }).start();
   }, []);
 
-  const textColor  = isUser ? '#1C1A17' : colors.text;
+  const textColor  = isUser ? palette.onGold : colors.text;
   const mutedColor = isUser ? 'rgba(28,26,23,0.55)' : colors.textMuted;
 
   return (

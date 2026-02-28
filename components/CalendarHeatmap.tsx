@@ -15,15 +15,15 @@ interface Props {
 
 const DAY_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
 
-/** Map prayer count (0–5) to a green-scale background color. */
+/** Map prayer count (0–5) to a green-scale background color (based on palette.green = #1B4332). */
 function countColor(count: number, emptyColor: string, future: boolean): string {
-  if (future)    return 'transparent';
+  if (future)      return 'transparent';
   if (count === 0) return emptyColor;
   if (count === 1) return 'rgba(27,67,50,0.22)';
   if (count === 2) return 'rgba(27,67,50,0.40)';
   if (count === 3) return 'rgba(27,67,50,0.58)';
   if (count === 4) return 'rgba(27,67,50,0.76)';
-  return '#1B4332';
+  return 'rgba(27,67,50,1.00)'; // palette.green fully opaque
 }
 
 interface CalCell {

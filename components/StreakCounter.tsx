@@ -51,7 +51,7 @@ export default function StreakCounter({ streak }: Props) {
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
       {/* Gold top accent bar */}
-      <View style={[styles.topAccent, { backgroundColor: active ? '#FF6B35' : colors.border }]} />
+      <View style={[styles.topAccent, { backgroundColor: active ? palette.flame : colors.border }]} />
 
       <View style={styles.body}>
         {/* Flame */}
@@ -59,7 +59,7 @@ export default function StreakCounter({ streak }: Props) {
           <MaterialCommunityIcons
             name="fire"
             size={32}
-            color={active ? '#FF6B35' : colors.tabInactive}
+            color={active ? palette.flame : colors.tabInactive}
           />
         </Animated.View>
 

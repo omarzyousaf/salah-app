@@ -14,6 +14,7 @@
 import * as Clipboard from 'expo-clipboard';
 import { useRef, useState } from 'react';
 import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+// Platform kept for android textAlign override
 
 import { useTheme } from '@/context/ThemeContext';
 
@@ -125,8 +126,7 @@ const styles = StyleSheet.create({
 
   // Arabic — right-aligned, large, elegant
   arabic: {
-    fontFamily:    Platform.OS === 'ios' ? 'GeezaPro' : 'serif',
-    // ↑ Replace with 'Amiri' once the font is loaded (see file header comment)
+    fontFamily:    'Amiri',
     fontSize:      22,
     lineHeight:    38,
     textAlign:     'right',

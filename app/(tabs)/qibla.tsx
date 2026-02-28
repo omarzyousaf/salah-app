@@ -112,8 +112,8 @@ function CompassSvg({ qiblaBearing, isDark }: { qiblaBearing: number; isDark: bo
   // Gradient id (stable for this single SVG instance)
   const gradId = 'qiblaFace';
 
-  const bgColor  = isDark ? '#111111' : '#FFFFFF';
-  const midColor = isDark ? '#0D0D0D' : '#F9F5EE';
+  const bgColor  = colors.card;
+  const midColor = colors.cardAlt;
 
   // Islamic geometric decoration: two overlapping squares at 45° make an 8-point star
   const bgStarLg  = starPoints(CX, CY, 80, 34);   // large background star
@@ -179,7 +179,7 @@ function CompassSvg({ qiblaBearing, isDark }: { qiblaBearing: number; isDark: bo
             <SvgText
               x={lp.x}
               y={lp.y + 5}
-              fill={label === 'N' ? '#EF5350' : colors.text}
+              fill={label === 'N' ? palette.north : colors.text}
               fontSize={label === 'N' ? 15 : 11}
               fontWeight={label === 'N' ? '700' : '500'}
               textAnchor="middle"
@@ -424,9 +424,9 @@ export default function QiblaScreen() {
 
         {/* ── No magnetometer ── */}
         {magAvailable === false && (
-          <View style={[styles.notice, { backgroundColor: colors.cardAlt, borderColor: '#EF535033' }]}>
-            <MaterialCommunityIcons name="alert-circle-outline" size={15} color="#EF5350" />
-            <Text style={[styles.noticeText, { color: '#EF5350' }]}>
+          <View style={[styles.notice, { backgroundColor: colors.dangerBg, borderColor: colors.dangerBorder }]}>
+            <MaterialCommunityIcons name="alert-circle-outline" size={15} color={colors.danger} />
+            <Text style={[styles.noticeText, { color: colors.danger }]}>
               Compass sensor unavailable — the bearing above shows direction from North
             </Text>
           </View>

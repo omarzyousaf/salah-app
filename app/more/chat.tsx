@@ -287,13 +287,13 @@ export default function ChatScreen() {
               style={[
                 styles.errorBanner,
                 {
-                  backgroundColor: 'rgba(220,80,80,0.10)',
-                  borderColor:     'rgba(220,80,80,0.25)',
+                  backgroundColor: colors.dangerBg,
+                  borderColor:     colors.dangerBorder,
                 },
               ]}
             >
-              <MaterialCommunityIcons name="alert-circle-outline" size={14} color="#DC5050" />
-              <Text style={[styles.errorText, { color: '#DC5050' }]}>{error}</Text>
+              <MaterialCommunityIcons name="alert-circle-outline" size={14} color={colors.danger} />
+              <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text>
             </View>
           )}
         </ScrollView>
@@ -314,7 +314,7 @@ export default function ChatScreen() {
             <Text
               style={[
                 styles.countText,
-                { color: showWarn || isLimitReached ? '#C8843E' : colors.textMuted },
+                { color: showWarn || isLimitReached ? palette.gold : colors.textMuted },
               ]}
             >
               {isLimitReached
@@ -355,7 +355,7 @@ export default function ChatScreen() {
               <MaterialCommunityIcons
                 name="send"
                 size={18}
-                color={canSend ? '#1C1A17' : colors.tabInactive}
+                color={canSend ? palette.onGold : colors.tabInactive}
               />
             </TouchableOpacity>
           </View>
@@ -365,7 +365,7 @@ export default function ChatScreen() {
             <Text
               style={[
                 styles.charCount,
-                { color: input.length >= MAX_CHARS ? '#DC5050' : colors.tabInactive },
+                { color: input.length >= MAX_CHARS ? colors.danger : colors.tabInactive },
               ]}
             >
               {input.length} / {MAX_CHARS}

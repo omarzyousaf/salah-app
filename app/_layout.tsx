@@ -1,9 +1,11 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
+import { Amiri_400Regular } from '@expo-google-fonts/amiri';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { Animated } from 'react-native';
 import 'react-native-reanimated';
 
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
@@ -19,6 +21,7 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    Amiri:     Amiri_400Regular,
     ...FontAwesome.font,
   });
 
@@ -40,17 +43,21 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const { isDark } = useTheme();
+  const { isDark, transitionOpacity } = useTheme();
   return (
     <NavThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)"        options={{ headerShown: false }} />
-        <Stack.Screen name="more/hadith"   options={{ headerShown: false }} />
-        <Stack.Screen name="more/duas"    options={{ headerShown: false }} />
-        <Stack.Screen name="more/chat"    options={{ headerShown: false }} />
-        <Stack.Screen name="quran/[surah]" options={{ headerShown: false }} />
-        <Stack.Screen name="modal"         options={{ presentation: 'modal' }} />
-      </Stack>
+      {/* Animated wrapper enables smooth cross-fade on theme switch */}
+      <Animated.View style={{ flex: 1, opacity: transitionOpacity }}>
+        <Stack>
+          <Stack.Screen name="(tabs)"          options={{ headerShown: false }} />
+          <Stack.Screen name="more/hadith"     options={{ headerShown: false }} />
+          <Stack.Screen name="more/duas"       options={{ headerShown: false }} />
+          <Stack.Screen name="more/chat"       options={{ headerShown: false }} />
+          <Stack.Screen name="more/settings"   options={{ headerShown: false }} />
+          <Stack.Screen name="quran/[surah]"   options={{ headerShown: false }} />
+          <Stack.Screen name="modal"           options={{ presentation: 'modal' }} />
+        </Stack>
+      </Animated.View>
     </NavThemeProvider>
   );
 }
