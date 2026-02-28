@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/context/ThemeContext';
 import SunArc from '@/components/SunArc';
+import WeatherBackground from '@/components/WeatherBackground';
 import {
   PRAYER_NAMES,
   PrayerName,
@@ -457,7 +458,16 @@ export default function PrayerTimesScreen() {
   // ── Success ───────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
+    <View style={[styles.root, { backgroundColor: colors.bg }]}>
+      {/* Weather-reactive background — rendered behind all content */}
+      <WeatherBackground
+        lat={prayerData!.meta.latitude}
+        lon={prayerData!.meta.longitude}
+        timings={prayerData!.timings}
+        now={now}
+      />
+
+      <SafeAreaView style={styles.safe} edges={['top']}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -567,12 +577,14 @@ export default function PrayerTimesScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </View>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  root:   { flex: 1 },
   safe:   { flex: 1 },
   scroll: { padding: 20, paddingBottom: 40 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
