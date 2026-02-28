@@ -1,17 +1,16 @@
 /**
  * AyahCard — displays one Quran ayah: Arabic, transliteration, English.
+ * Highlights with a gold tint when isPlaying = true (smooth animated transition).
  *
  * ARABIC FONT: For best Arabic rendering, add the Amiri or Scheherazade New font:
  *   1. Download Amiri-Regular.ttf from https://fonts.google.com/specimen/Amiri
  *   2. Place it in assets/fonts/Amiri-Regular.ttf
  *   3. In app/_layout.tsx, add to useFonts: { Amiri: require('../assets/fonts/Amiri-Regular.ttf') }
  *   4. Change fontFamily below from 'GeezaPro'/'serif' to 'Amiri'
- *
- * Until then, Geeza Pro (iOS) / Noto Naskh Arabic (Android) is used —
- * both render Arabic correctly, just without calligraphic styling.
  */
 
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '@/context/ThemeContext';
 
@@ -22,6 +21,7 @@ interface Props {
   arabic:          string;
   transliteration: string;
   english:         string;
+  isPlaying?:      boolean;
   isLast?:         boolean;
 }
 
@@ -32,16 +32,43 @@ export default function AyahCard({
   arabic,
   transliteration,
   english,
+  isPlaying = false,
   isLast,
 }: Props) {
   const { colors, palette } = useTheme();
 
+  // Smooth highlight animation (not native driver — animating backgroundColor)
+  const highlightAnim = useRef(new Animated.Value(isPlaying ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(highlightAnim, {
+      toValue:         isPlaying ? 1 : 0,
+      duration:        300,
+      useNativeDriver: false,
+    }).start();
+  }, [isPlaying]);
+
+  const animatedBg = highlightAnim.interpolate({
+    inputRange:  [0, 1],
+    outputRange: ['rgba(200,169,110,0.00)', 'rgba(200,169,110,0.07)'],
+  });
+
+  const animatedBorder = highlightAnim.interpolate({
+    inputRange:  [0, 1],
+    outputRange: ['rgba(200,169,110,0.00)', 'rgba(200,169,110,0.55)'],
+  });
+
   return (
-    <View
+    <Animated.View
       style={[
         styles.card,
-        { borderBottomColor: colors.border },
-        !isLast && styles.border,
+        {
+          backgroundColor:  animatedBg,
+          borderBottomColor: !isLast ? colors.border : 'transparent',
+          borderLeftColor:   animatedBorder,
+        },
+        !isLast && styles.borderBottom,
+        styles.borderLeft,
       ]}
     >
       {/* ── Ayah number badge + extending hairline ── */}
@@ -50,8 +77,8 @@ export default function AyahCard({
           style={[
             styles.badge,
             {
-              backgroundColor: 'rgba(200,169,110,0.10)',
-              borderColor:     'rgba(200,169,110,0.28)',
+              backgroundColor: isPlaying ? 'rgba(200,169,110,0.18)' : 'rgba(200,169,110,0.10)',
+              borderColor:     isPlaying ? 'rgba(200,169,110,0.55)' : 'rgba(200,169,110,0.28)',
             },
           ]}
         >
@@ -82,7 +109,7 @@ export default function AyahCard({
       <Text style={[styles.english, { color: colors.text }]}>
         {english}
       </Text>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -93,9 +120,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop:        22,
     paddingBottom:     20,
+    borderLeftWidth:   3,
   },
-  border: {
+  borderBottom: {
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  borderLeft: {
+    // borderLeftColor set dynamically via animated interpolation
   },
 
   // Badge row
@@ -114,8 +145,8 @@ const styles = StyleSheet.create({
     flexShrink:     0,
   },
   badgeNum: {
-    fontSize:   13,
-    fontWeight: '600',
+    fontSize:      13,
+    fontWeight:    '600',
     letterSpacing: 0.2,
   },
   badgeLine: {

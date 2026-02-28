@@ -1,9 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   FlatList,
   KeyboardAvoidingView,
@@ -15,29 +14,29 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import AudioPlayer from '@/components/AudioPlayer';
 import AyahCard from '@/components/AyahCard';
 import { useTheme } from '@/context/ThemeContext';
-import { fetchSurahDetail, type SurahDetail } from '@/services/quran';
+import {
+  buildAyahItems,
+  fetchSurahDetail,
+  type AyahItem,
+  type SurahDetail,
+} from '@/services/quran';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-// Estimated average height per ayah (Arabic 48px line-height × ~3 lines +
-// transliteration + English + padding). Used by getItemLayout for O(1)
-// scroll-to-index. Actual heights vary; this is a reasonable midpoint.
+// Estimated average height per ayah used for getItemLayout.
+// Provides O(1) scroll-to-index at the cost of slight inaccuracy on long verses.
 const ESTIMATED_ITEM_HEIGHT = 260;
 
+// Height of the AudioPlayer bar (progress track 3 + body ~74 + bottom inset).
+// The list adds extra paddingBottom to clear the floating bar.
+const PLAYER_BAR_BODY_HEIGHT = 80;
+
 const LAST_READ_KEY = 'salah_last_read_v1';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type AyahItem = {
-  numberInSurah:   number;
-  arabic:          string;
-  transliteration: string;
-  english:         string;
-};
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
 
@@ -74,10 +73,10 @@ function SkeletonScreen() {
             { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth },
           ]}
         >
-          <Bone style={skStyles.badge} />
+          <Bone style={skStyles.badge}  />
           <Bone style={skStyles.arabic} />
-          <Bone style={skStyles.line1} />
-          <Bone style={skStyles.line2} />
+          <Bone style={skStyles.line1}  />
+          <Bone style={skStyles.line2}  />
         </View>
       ))}
     </View>
@@ -98,19 +97,14 @@ function SurahInfoHeader({ detail }: { detail: SurahDetail }) {
   const { colors, palette } = useTheme();
   return (
     <View style={[infoStyles.wrap, { borderBottomColor: colors.border }]}>
-      {/* Gold diamond divider */}
       <View style={infoStyles.divider}>
         <View style={[infoStyles.divLine,    { backgroundColor: colors.border }]} />
         <View style={[infoStyles.divDiamond, { backgroundColor: palette.gold }]} />
         <View style={[infoStyles.divLine,    { backgroundColor: colors.border }]} />
       </View>
-
-      {/* Meaning */}
       <Text style={[infoStyles.meaning, { color: colors.textMuted }]}>
         {detail.englishNameTranslation}
       </Text>
-
-      {/* Revelation type + ayah count chips */}
       <View style={infoStyles.chips}>
         <View
           style={[
@@ -126,12 +120,7 @@ function SurahInfoHeader({ detail }: { detail: SurahDetail }) {
           <Text
             style={[
               infoStyles.chipText,
-              {
-                color:
-                  detail.revelationType === 'Meccan'
-                    ? palette.gold
-                    : '#2D6A4F',
-              },
+              { color: detail.revelationType === 'Meccan' ? palette.gold : '#2D6A4F' },
             ]}
           >
             {detail.revelationType}
@@ -143,8 +132,6 @@ function SurahInfoHeader({ detail }: { detail: SurahDetail }) {
           </Text>
         </View>
       </View>
-
-      {/* Divider again */}
       <View style={infoStyles.divider}>
         <View style={[infoStyles.divLine,    { backgroundColor: colors.border }]} />
         <View style={[infoStyles.divDiamond, { backgroundColor: palette.gold }]} />
@@ -170,7 +157,7 @@ const infoStyles = StyleSheet.create({
   chipText:   { fontSize: 11, fontWeight: '600', letterSpacing: 0.4 },
 });
 
-// ─── Jump to Ayah modal ────────────────────────────────────────────────────────
+// ─── Jump to Ayah modal ───────────────────────────────────────────────────────
 
 function JumpModal({
   visible,
@@ -189,12 +176,7 @@ function JumpModal({
 }) {
   const { colors, palette } = useTheme();
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
         style={jumpStyles.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -210,11 +192,7 @@ function JumpModal({
           <TextInput
             style={[
               jumpStyles.input,
-              {
-                color:           colors.text,
-                borderColor:     colors.border,
-                backgroundColor: colors.cardAlt,
-              },
+              { color: colors.text, borderColor: colors.border, backgroundColor: colors.cardAlt },
             ]}
             keyboardType="number-pad"
             placeholder={`1 – ${totalAyahs}`}
@@ -250,7 +228,7 @@ const jumpStyles = StyleSheet.create({
     paddingBottom:        40,
     gap:                  14,
   },
-  title: { fontSize: 17, fontWeight: '500', letterSpacing: 0.3 },
+  title:   { fontSize: 17, fontWeight: '500', letterSpacing: 0.3 },
   input: {
     height:            52,
     borderRadius:      12,
@@ -259,12 +237,7 @@ const jumpStyles = StyleSheet.create({
     fontSize:          22,
     letterSpacing:     0.5,
   },
-  btn: {
-    height:         52,
-    borderRadius:   12,
-    alignItems:     'center',
-    justifyContent: 'center',
-  },
+  btn:     { height: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   btnText: { color: '#111', fontWeight: '700', fontSize: 15, letterSpacing: 0.3 },
 });
 
@@ -274,6 +247,7 @@ export default function SurahDetailScreen() {
   const { surah: surahParam } = useLocalSearchParams<{ surah: string }>();
   const surahNum = parseInt(surahParam ?? '1', 10);
   const { colors, palette } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const [detail,      setDetail]      = useState<SurahDetail | null>(null);
   const [loading,     setLoading]     = useState(true);
@@ -281,20 +255,18 @@ export default function SurahDetailScreen() {
   const [jumpVisible, setJumpVisible] = useState(false);
   const [jumpText,    setJumpText]    = useState('');
 
-  const listRef         = useRef<FlatList<AyahItem>>(null);
-  const hasRestoredRef  = useRef(false);
+  // Currently playing ayah index (0-based), null when stopped
+  const [playingIdx,  setPlayingIdx]  = useState<number | null>(null);
 
-  // ── Build merged ayah list ────────────────────────────────────────────────
+  const listRef        = useRef<FlatList<AyahItem>>(null);
+  const hasRestoredRef = useRef(false);
 
-  const ayahs = useMemo<AyahItem[]>(() => {
-    if (!detail) return [];
-    return detail.ayahs.arabic.map((a, i) => ({
-      numberInSurah:   a.numberInSurah,
-      arabic:          a.text,
-      transliteration: detail.ayahs.transliteration[i]?.text ?? '',
-      english:         detail.ayahs.english[i]?.text ?? '',
-    }));
-  }, [detail]);
+  // ── Build merged ayah list using service helper ───────────────────────────
+
+  const ayahs = useMemo<AyahItem[]>(
+    () => (detail ? buildAyahItems(detail) : []),
+    [detail],
+  );
 
   // ── Fetch on mount ────────────────────────────────────────────────────────
 
@@ -316,17 +288,14 @@ export default function SurahDetailScreen() {
         if (!v) return;
         const lr = JSON.parse(v) as { surah: number; ayah: number };
         if (lr.surah !== surahNum || lr.ayah <= 1) return;
-
-        const idx = lr.ayah - 1;
         setTimeout(() => {
-          listRef.current?.scrollToIndex({ index: idx, animated: false });
+          listRef.current?.scrollToIndex({ index: lr.ayah - 1, animated: false });
         }, 150);
       })
       .catch(() => {});
   }, [ayahs.length, surahNum]);
 
-  // ── Save last-read position as user scrolls ───────────────────────────────
-  // Must be a stable ref — FlatList warns if these props change after mount
+  // ── Save last-read position on scroll (stable refs) ───────────────────────
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 });
 
@@ -340,6 +309,21 @@ export default function SurahDetailScreen() {
     },
   );
 
+  // ── Auto-scroll to playing ayah ───────────────────────────────────────────
+
+  useEffect(() => {
+    if (playingIdx === null || !ayahs.length) return;
+    setTimeout(() => {
+      listRef.current?.scrollToIndex({ index: playingIdx, animated: true });
+    }, 80);
+  }, [playingIdx, ayahs.length]);
+
+  // ── AudioPlayer callback ───────────────────────────────────────────────────
+
+  const handleAyahChange = useCallback((idx: number | null) => {
+    setPlayingIdx(idx);
+  }, []);
+
   // ── Jump to ayah ──────────────────────────────────────────────────────────
 
   function handleJump() {
@@ -349,6 +333,10 @@ export default function SurahDetailScreen() {
     setJumpVisible(false);
     setJumpText('');
   }
+
+  // ── Extra bottom padding to clear the floating audio player bar ───────────
+
+  const playerClearance = PLAYER_BAR_BODY_HEIGHT + (insets.bottom > 0 ? insets.bottom : 8) + 16;
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -401,14 +389,10 @@ export default function SurahDetailScreen() {
           ref={listRef}
           data={ayahs}
           keyExtractor={(_, index) => String(index)}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={{ paddingBottom: playerClearance }}
           showsVerticalScrollIndicator={false}
 
-          // ── Performance ──────────────────────────────────────────────────
-          // getItemLayout enables O(1) index-based scrolling (jump to ayah,
-          // restore position). Uses an estimated average height — actual heights
-          // vary by verse length, but this is a good-enough midpoint for all
-          // 114 surahs. Short surahs are unaffected; long ones scroll near target.
+          // ── Performance optimisations ─────────────────────────────────────
           getItemLayout={(_data, index) => ({
             length: ESTIMATED_ITEM_HEIGHT,
             offset: ESTIMATED_ITEM_HEIGHT * index,
@@ -428,7 +412,7 @@ export default function SurahDetailScreen() {
             }, 300);
           }}
 
-          // ── Save last-read position ───────────────────────────────────────
+          // ── Track last-read position ──────────────────────────────────────
           onViewableItemsChanged={onViewableItemsChangedRef.current}
           viewabilityConfig={viewabilityConfig.current}
 
@@ -440,9 +424,18 @@ export default function SurahDetailScreen() {
               arabic={item.arabic}
               transliteration={item.transliteration}
               english={item.english}
+              isPlaying={playingIdx === index}
               isLast={index === ayahs.length - 1}
             />
           )}
+        />
+      )}
+
+      {/* ── Floating audio player (shown whenever data is loaded) ── */}
+      {!loading && !error && ayahs.length > 0 && (
+        <AudioPlayer
+          ayahs={ayahs}
+          onAyahChange={handleAyahChange}
         />
       )}
 
@@ -464,8 +457,8 @@ export default function SurahDetailScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  safe:   { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
+  safe:      { flex: 1 },
+  center:    { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
   errorText: { marginTop: 14, fontSize: 13, textAlign: 'center', letterSpacing: 0.2 },
 
   // Top bar
@@ -486,10 +479,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   topArabic: {
-    fontSize:   18,
+    fontSize:      18,
     letterSpacing: 0.5,
-    lineHeight: 24,
-    fontFamily: Platform.OS === 'ios' ? 'GeezaPro' : 'serif',
+    lineHeight:    24,
+    fontFamily:    Platform.OS === 'ios' ? 'GeezaPro' : 'serif',
     // Replace with 'Amiri' once font is loaded
   },
   topEng: {
@@ -498,7 +491,4 @@ const styles = StyleSheet.create({
     fontWeight:    '300',
     marginTop:     2,
   },
-
-  // List
-  listContent: { paddingBottom: 60 },
 });
