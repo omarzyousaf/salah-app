@@ -70,6 +70,12 @@ export default function MoreScreen() {
           onPress={() => router.push('/more/duas')}
         />
 
+        <MenuRow
+          icon="chat-outline"
+          label="Noor — Islamic AI"
+          onPress={() => router.push('/more/chat')}
+        />
+
         {/* ── Appearance ── */}
         <SectionLabel title="APPEARANCE" />
 
