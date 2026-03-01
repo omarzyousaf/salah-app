@@ -5,17 +5,19 @@
  * so ANTHROPIC_API_KEY is never exposed in the client bundle.
  *
  * Features:
- *  • Persistent device_id stored in AsyncStorage (random UUID-like string)
+ *  • Persistent device_id from SecureStore via lib/deviceId
  *  • Local daily message count: warn UI at 15, soft-block at 20
  *  • Streaming SSE parsing — forwards content_block_delta events in real time
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const SUPABASE_URL  = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const CHAT_ENDPOINT = `${SUPABASE_URL}/functions/v1/chat`;
+import { getDeviceId } from '@/lib/deviceId';
 
-const KEY_DEVICE_ID = 'salah_device_id';
+const SUPABASE_URL      = process.env.EXPO_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+const CHAT_ENDPOINT     = `${SUPABASE_URL}/functions/v1/chat`;
+
 const KEY_MSG_COUNT = 'salah_chat_daily'; // { date: string; count: number }
 
 export const DAILY_LIMIT = 20;
@@ -33,18 +35,6 @@ export interface CountInfo {
   remaining:      number;
   isLimitReached: boolean;
   shouldWarn:     boolean;
-}
-
-// ─── Device ID ───────────────────────────────────────────────────────────────
-
-async function getDeviceId(): Promise<string> {
-  try {
-    const existing = await AsyncStorage.getItem(KEY_DEVICE_ID);
-    if (existing) return existing;
-  } catch {}
-  const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
-  AsyncStorage.setItem(KEY_DEVICE_ID, id).catch(() => {});
-  return id;
 }
 
 // ─── Daily message count ─────────────────────────────────────────────────────
@@ -107,8 +97,12 @@ export async function streamMessage(params: {
   try {
     res = await fetch(CHAT_ENDPOINT, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ messages, device_id }),
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'apikey':        SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ messages, device_id }),
     });
   } catch {
     onError('No internet connection. Please check your network and try again.');

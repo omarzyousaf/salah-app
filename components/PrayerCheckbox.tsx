@@ -66,6 +66,9 @@ export default function PrayerCheckbox({ name, checked, onToggle, loading, isLas
         checked && { backgroundColor: 'rgba(200,169,110,0.06)' },
         !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
       ]}
+      accessibilityRole="checkbox"
+      accessibilityLabel={`${name} prayer`}
+      accessibilityState={{ checked, disabled: loading }}
     >
       {/* Gold left accent */}
       <Animated.View

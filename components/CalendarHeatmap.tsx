@@ -93,7 +93,14 @@ export default function CalendarHeatmap({ heatmap, today }: Props) {
 
       {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => goMonth(-1)} style={styles.navBtn} activeOpacity={0.7}>
+        <TouchableOpacity
+          onPress={() => goMonth(-1)}
+          style={styles.navBtn}
+          activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel="Previous month"
+        >
           <Ionicons name="chevron-back" size={18} color={colors.text} />
         </TouchableOpacity>
 
@@ -110,6 +117,10 @@ export default function CalendarHeatmap({ heatmap, today }: Props) {
           onPress={() => !isCurrentMonth && goMonth(1)}
           style={[styles.navBtn, isCurrentMonth && { opacity: 0.25 }]}
           activeOpacity={isCurrentMonth ? 1 : 0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel="Next month"
+          accessibilityState={{ disabled: isCurrentMonth }}
         >
           <Ionicons name="chevron-forward" size={18} color={colors.text} />
         </TouchableOpacity>

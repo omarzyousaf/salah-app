@@ -16,6 +16,7 @@ import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -30,6 +31,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/context/ThemeContext';
 import type { ThemeMode } from '@/context/ThemeContext';
+import {
+  type NotifPrefs,
+  type PermissionStatus,
+  type PrayerNotifName,
+  PRAYER_NOTIF_NAMES,
+  getCachedTimings,
+  getNotifPrefs,
+  getNotificationPermission,
+  requestNotificationPermission,
+  saveNotifPrefs,
+  schedulePrayerNotifications,
+  cancelAllPrayerNotifications,
+} from '@/lib/notifications';
 import {
   type PrayerMethodId,
   type ReciterId,
@@ -178,6 +192,13 @@ export default function SettingsScreen() {
   const [methodPickerOpen, setMethodPickerOpen]   = useState(false);
   const [reciterPickerOpen, setReciterPickerOpen] = useState(false);
 
+  // Notifications
+  const [notifPrefs,      setNotifPrefs]       = useState<NotifPrefs>({
+    enabled: false,
+    prayers: { Fajr: true, Dhuhr: true, Asr: true, Maghrib: true, Isha: true },
+  });
+  const [notifPermission, setNotifPermission]  = useState<PermissionStatus>('undetermined');
+
   // Load settings from AsyncStorage on mount
   useEffect(() => {
     getSettings().then(s => {
@@ -193,6 +214,10 @@ export default function SettingsScreen() {
         } catch {}
       }
     });
+
+    // Notification prefs + current permission status
+    getNotifPrefs().then(setNotifPrefs);
+    getNotificationPermission().then(setNotifPermission);
   }, []);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
@@ -207,6 +232,54 @@ export default function SettingsScreen() {
     const r = String(id) as ReciterId;
     setReciterState(r);
     setDefaultReciter(r);
+  }
+
+  // ── Notification handlers ─────────────────────────────────────────────────
+
+  /** Apply updated prefs: save + reschedule (or cancel if disabled). */
+  async function applyNotifPrefs(next: NotifPrefs) {
+    setNotifPrefs(next);
+    await saveNotifPrefs(next);
+
+    if (!next.enabled) {
+      await cancelAllPrayerNotifications();
+      return;
+    }
+
+    const cached = await getCachedTimings();
+    if (cached) {
+      await schedulePrayerNotifications(cached.timings, cached.hijriDate, next);
+    }
+  }
+
+  async function handleMasterToggle(value: boolean) {
+    if (value && notifPermission !== 'granted') {
+      // Need to request permission first
+      const status = await requestNotificationPermission();
+      setNotifPermission(status);
+
+      if (status !== 'granted') {
+        Alert.alert(
+          'Notifications Disabled',
+          'To receive prayer reminders, enable notifications for Salah in your device Settings.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ],
+        );
+        return; // do not enable master toggle
+      }
+    }
+
+    await applyNotifPrefs({ ...notifPrefs, enabled: value });
+  }
+
+  async function handlePrayerToggle(name: PrayerNotifName, value: boolean) {
+    const next: NotifPrefs = {
+      ...notifPrefs,
+      prayers: { ...notifPrefs.prayers, [name]: value },
+    };
+    await applyNotifPrefs(next);
   }
 
   const handleClearData = useCallback(() => {
@@ -312,6 +385,83 @@ export default function SettingsScreen() {
           value={methodLabel}
           onPress={() => setMethodPickerOpen(true)}
         />
+
+        {/* ── NOTIFICATIONS ── */}
+        <SectionLabel title="NOTIFICATIONS" />
+
+        {/* Master toggle */}
+        <SettingRow
+          icon="bell-outline"
+          label="Prayer Notifications"
+          right={
+            <Switch
+              value={notifPrefs.enabled}
+              onValueChange={handleMasterToggle}
+              trackColor={{ false: colors.cardAlt, true: 'rgba(200,169,110,0.40)' }}
+              thumbColor={notifPrefs.enabled ? palette.gold : colors.tabInactive}
+            />
+          }
+        />
+
+        {/* Permission denied hint */}
+        {notifPermission === 'denied' && (
+          <TouchableOpacity
+            style={[
+              styles.hint,
+              { backgroundColor: colors.dangerBg, borderColor: colors.dangerBorder },
+            ]}
+            onPress={() => Linking.openSettings()}
+            activeOpacity={0.75}
+          >
+            <MaterialCommunityIcons name="alert-circle-outline" size={13} color={colors.danger} />
+            <Text style={[styles.hintText, { color: colors.danger }]}>
+              Notifications are blocked. Tap here to enable them in device Settings.
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Per-prayer toggles */}
+        <View
+          style={[
+            styles.prayerTogglesCard,
+            {
+              backgroundColor: colors.card,
+              borderColor:     colors.border,
+              opacity:         notifPrefs.enabled ? 1 : 0.45,
+            },
+          ]}
+          pointerEvents={notifPrefs.enabled ? 'auto' : 'none'}
+        >
+          {PRAYER_NOTIF_NAMES.map((name, i) => (
+            <View
+              key={name}
+              style={[
+                styles.prayerToggleRow,
+                i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+              ]}
+            >
+              <Text style={[styles.prayerToggleLabel, { color: colors.text }]}>{name}</Text>
+              <Switch
+                value={notifPrefs.prayers[name]}
+                onValueChange={v => handlePrayerToggle(name, v)}
+                trackColor={{ false: colors.cardAlt, true: 'rgba(200,169,110,0.40)' }}
+                thumbColor={notifPrefs.prayers[name] ? palette.gold : colors.tabInactive}
+              />
+            </View>
+          ))}
+        </View>
+
+        <View
+          style={[
+            styles.hint,
+            { backgroundColor: colors.cardAlt, borderColor: colors.border },
+          ]}
+        >
+          <MaterialCommunityIcons name="information-outline" size={13} color={colors.textMuted} />
+          <Text style={[styles.hintText, { color: colors.textMuted }]}>
+            Reminders fire 5 minutes before each prayer. During Ramadan, a Suhoor reminder is added 30 minutes before Fajr.
+          </Text>
+        </View>
 
         {/* ── QURAN ── */}
         <SectionLabel title="QURAN" />
@@ -456,6 +606,25 @@ const styles = StyleSheet.create({
     borderWidth:        1,
   },
   segText: { fontSize: 11, fontWeight: '500', letterSpacing: 0.2 },
+
+  // Per-prayer toggle card
+  prayerTogglesCard: {
+    borderRadius:  14,
+    borderWidth:   1,
+    marginBottom:  8,
+    overflow:      'hidden',
+  },
+  prayerToggleRow: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    paddingHorizontal: 14,
+    paddingVertical:   11,
+  },
+  prayerToggleLabel: {
+    flex:          1,
+    fontSize:      15,
+    letterSpacing: 0.2,
+  },
 
   // Hint
   hint: {

@@ -1,13 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Animated,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,9 +18,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useTheme } from '@/context/ThemeContext';
+import { PrayerTimesSkeleton } from '@/components/Skeleton';
 import SunArc from '@/components/SunArc';
 import WeatherBackground from '@/components/WeatherBackground';
+import { useTheme } from '@/context/ThemeContext';
+import { saveCachedTimings } from '@/lib/notifications';
 import {
   PRAYER_NAMES,
   PrayerName,
@@ -74,6 +77,8 @@ function PrayerCard({ name, time, isNext, isPast }: PrayerCardProps) {
   const nameColor = isNext ? palette.gold : isPast ? colors.textMuted    : colors.text;
   const timeColor = isNext ? palette.gold : isPast ? colors.textMuted    : colors.text;
 
+  const a11yLabel = `${cfg.label}, ${formatTime(time)}${isNext ? ', next prayer' : isPast ? ', already passed' : ''}`;
+
   return (
     <View
       style={[
@@ -82,6 +87,8 @@ function PrayerCard({ name, time, isNext, isPast }: PrayerCardProps) {
         isNext && { borderWidth: 1.5 },
         isPast && { opacity: 0.45 },
       ]}
+      accessible
+      accessibilityLabel={a11yLabel}
     >
       {/* Gold left accent on next prayer */}
       {isNext && (
@@ -272,6 +279,7 @@ export default function PrayerTimesScreen() {
   const [cityInput,    setCityInput]    = useState('');
   const [countryInput, setCountryInput] = useState('');
   const [searching,    setSearching]    = useState(false);
+  const [refreshing,   setRefreshing]   = useState(false);
 
   // Live "now" — updates every second for the countdown timer
   const [now, setNow] = useState(new Date());
@@ -314,10 +322,19 @@ export default function PrayerTimesScreen() {
       // Persist location
       await AsyncStorage.setItem(LOCATION_KEY, JSON.stringify(loc));
       setLocation(loc);
+      // Cache timings so notifications can reschedule on app restart
+      saveCachedTimings(data.timings, data.date.hijri).catch(() => {});
     } catch (e: any) {
       setStatus('error');
       setErrorMsg(e?.message ?? 'Unknown error');
     }
+  }
+
+  async function handleRefresh() {
+    if (!location) return;
+    setRefreshing(true);
+    await fetchAndSet(location);
+    setRefreshing(false);
   }
 
   // ── GPS ───────────────────────────────────────────────────────────────────
@@ -390,14 +407,16 @@ export default function PrayerTimesScreen() {
 
   // ── Loading spinner ───────────────────────────────────────────────────────
 
-  if (status === 'init' || status === 'loading') {
+  // Show skeleton cards when fetching for the first time (no existing data)
+  if ((status === 'init' || status === 'loading') && !prayerData) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.bg }]}>
-        <ActivityIndicator size="large" color={palette.gold} />
-        <Text style={[styles.loadingText, { color: colors.textMuted }]}>
-          Fetching prayer times…
-        </Text>
-      </View>
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
+        <View style={styles.header}>
+          <View style={{ width: '45%', height: 16, borderRadius: 8, backgroundColor: colors.cardAlt, marginBottom: 6 }} />
+          <View style={{ width: '30%', height: 11, borderRadius: 6, backgroundColor: colors.cardAlt }} />
+        </View>
+        <PrayerTimesSkeleton />
+      </SafeAreaView>
     );
   }
 
@@ -421,8 +440,10 @@ export default function PrayerTimesScreen() {
 
         <TouchableOpacity
           style={[styles.gpsBtn, { backgroundColor: palette.gold }]}
-          onPress={handleGPS}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleGPS(); }}
           activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Use GPS to detect my location"
         >
           <MaterialCommunityIcons name="crosshairs-gps" size={18} color={palette.onGold} />
           <Text style={[styles.gpsBtnText, { color: palette.onGold }]}>Use GPS</Text>
@@ -456,6 +477,8 @@ export default function PrayerTimesScreen() {
           onPress={handleCitySearch}
           disabled={searching}
           activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Search city"
         >
           <Text style={[styles.searchBtnText, { color: palette.gold }]}>
             {searching ? 'Searching…' : 'Search City'}
@@ -486,6 +509,14 @@ export default function PrayerTimesScreen() {
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={palette.gold}
+              colors={[palette.gold]}
+            />
+          }
         >
           {/* ── Header ── */}
           <View style={styles.header}>
@@ -538,8 +569,10 @@ export default function PrayerTimesScreen() {
           <View style={[styles.searchSection, { borderTopColor: colors.border }]}>
             <TouchableOpacity
               style={[styles.gpsBtn, { backgroundColor: palette.gold }]}
-              onPress={handleGPS}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleGPS(); }}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Use GPS to detect my location"
             >
               <MaterialCommunityIcons name="crosshairs-gps" size={16} color={palette.onGold} />
               <Text style={[styles.gpsBtnText, { color: palette.onGold }]}>Use GPS</Text>
@@ -573,6 +606,8 @@ export default function PrayerTimesScreen() {
               onPress={handleCitySearch}
               disabled={searching}
               activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Search city"
             >
               <Text style={[styles.searchBtnText, { color: palette.gold }]}>
                 {searching ? 'Searching…' : 'Search City'}

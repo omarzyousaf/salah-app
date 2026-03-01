@@ -1,11 +1,12 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   FlatList,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -14,8 +15,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { QuranListSkeleton } from '@/components/Skeleton';
 import { useTheme } from '@/context/ThemeContext';
 import { fetchSurahList, type Surah } from '@/services/quran';
+
+// Approximate height of each SurahRow: paddingVertical*2 (24) + content (~56) + marginBottom (8)
+const SURAH_ROW_H = 88;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -55,6 +60,8 @@ function SurahRow({
     }).start();
   }
 
+  const a11yLabel = `Surah ${surah.englishName}, ${surah.englishNameTranslation}, ${surah.numberOfAyahs} verses${isLastRead ? ', currently reading' : ''}`;
+
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
       <TouchableOpacity
@@ -66,10 +73,12 @@ function SurahRow({
           },
           isLastRead && { borderWidth: 1.5 },
         ]}
-        onPress={onPress}
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onPress(); }}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
         activeOpacity={1}
+        accessibilityRole="button"
+        accessibilityLabel={a11yLabel}
       >
         {/* Gold left accent when it's the last-read surah */}
         {isLastRead && (
@@ -219,12 +228,17 @@ export default function QuranScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.bg }]}>
-        <ActivityIndicator size="large" color={palette.gold} />
-        <Text style={[styles.centerText, { color: colors.textMuted }]}>
-          Loading Quran…
-        </Text>
-      </View>
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
+        <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <MaterialCommunityIcons name="magnify" size={18} color={colors.textMuted} />
+          <View style={{ flex: 1, height: 14, borderRadius: 7, backgroundColor: colors.cardAlt }} />
+        </View>
+        <View style={styles.header}>
+          <View style={{ width: 140, height: 24, borderRadius: 8, backgroundColor: colors.cardAlt, marginBottom: 6 }} />
+          <View style={{ width: 70, height: 11, borderRadius: 6, backgroundColor: colors.cardAlt }} />
+        </View>
+        <QuranListSkeleton />
+      </SafeAreaView>
     );
   }
 
@@ -288,6 +302,16 @@ export default function QuranScreen() {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        // ── Performance ──────────────────────────────────────────────────
+        getItemLayout={(_data, index) => ({
+          length: SURAH_ROW_H,
+          offset: SURAH_ROW_H * index,
+          index,
+        })}
+        initialNumToRender={12}
+        maxToRenderPerBatch={10}
+        windowSize={10}
+        removeClippedSubviews={Platform.OS === 'android'}
         renderItem={({ item }) => (
           <SurahRow
             surah={item}

@@ -1,4 +1,5 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,8 +30,15 @@ function MenuRow({
   return (
     <TouchableOpacity
       style={[styles.row, { backgroundColor: colors.card, borderColor: colors.border }]}
-      onPress={onPress}
+      onPress={() => {
+        if (onPress) {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onPress();
+        }
+      }}
       activeOpacity={onPress ? 0.7 : 1}
+      accessibilityRole={onPress ? 'button' : 'none'}
+      accessibilityLabel={label}
     >
       <View style={[styles.iconWrap, { backgroundColor: colors.cardAlt }]}>
         <MaterialCommunityIcons name={icon as any} size={18} color={palette.gold} />
@@ -144,6 +152,7 @@ const styles = StyleSheet.create({
     borderRadius:      14,
     borderWidth:       1,
     marginBottom:      8,
+    minHeight:         44,
     paddingVertical:   12,
     paddingHorizontal: 14,
     gap:               12,

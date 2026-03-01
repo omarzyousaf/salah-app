@@ -36,19 +36,24 @@ async function fetchByNumber(num: number): Promise<HadithData> {
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
   const json = await res.json() as {
-    hadiths?: Array<{ number?: number; english?: { narrator?: string; text?: string } }>;
-    hadith?:  Array<{ number?: number; english?: { narrator?: string; text?: string } }>;
+    hadiths?: Array<{ hadithnumber?: number; text?: string }>;
+    hadith?:  Array<{ hadithnumber?: number; text?: string }>;
   };
 
   const entry = json.hadiths?.[0] ?? json.hadith?.[0];
   if (!entry) throw new Error('Empty hadith response');
 
-  const text = entry.english?.text?.trim() ?? '';
-  if (!text) throw new Error('No English text in response');
+  const fullText = entry.text?.trim() ?? '';
+  if (!fullText) throw new Error('No text in response');
+
+  // "Narrated X: rest of hadith" — extract narrator from prefix
+  const narratorMatch = fullText.match(/^Narrated ([^:]+):/);
+  const narrator = narratorMatch ? narratorMatch[1].trim() : '';
+  const text     = narratorMatch ? fullText.slice(narratorMatch[0].length).trim() : fullText;
 
   return {
-    number:     entry.number ?? num,
-    narrator:   entry.english?.narrator?.trim() ?? '',
+    number:     entry.hadithnumber ?? num,
+    narrator,
     text,
     collection: 'Sahih al-Bukhari',
   };

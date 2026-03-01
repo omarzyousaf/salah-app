@@ -22,7 +22,7 @@ import { supabase } from '@/lib/supabase';
 const PRAYERS = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'] as const;
 type Prayer = (typeof PRAYERS)[number];
 
-const CACHE_KEY = 'salah_tracker_v2';
+const CACHE_KEY = 'salah_tracker_v3';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -133,21 +133,19 @@ export default function TrackerScreen() {
 
   async function refreshFromSupabase(did: string) {
     const { data } = await supabase
-      .from('prayer_logs')
-      .select('date, fajr, dhuhr, asr, maghrib, isha')
+      .from('prayer_log')
+      .select('prayer_date, prayer_name, prayed')
       .eq('device_id', did)
-      .gte('date', daysAgoStr(90));
+      .gte('prayer_date', daysAgoStr(90));
 
     if (data) {
       const fresh: Record<string, DayLog> = {};
       data.forEach((row: any) => {
-        fresh[row.date as string] = {
-          Fajr:    Boolean(row.fajr),
-          Dhuhr:   Boolean(row.dhuhr),
-          Asr:     Boolean(row.asr),
-          Maghrib: Boolean(row.maghrib),
-          Isha:    Boolean(row.isha),
-        };
+        const date = row.prayer_date as string;
+        if (!fresh[date]) fresh[date] = { ...EMPTY_LOG };
+        const name = (row.prayer_name as string);
+        const key  = (name.charAt(0).toUpperCase() + name.slice(1)) as Prayer;
+        if (key in EMPTY_LOG) fresh[date][key] = Boolean(row.prayed);
       });
       setLogs(fresh);
       setLoading(false);
@@ -177,18 +175,15 @@ export default function TrackerScreen() {
       setToggling(t => new Set(t).add(name));
 
       const { error } = await supabase
-        .from('prayer_logs')
+        .from('prayer_log')
         .upsert(
           {
-            device_id: deviceId,
-            date:      selDate,
-            fajr:      newLog.Fajr,
-            dhuhr:     newLog.Dhuhr,
-            asr:       newLog.Asr,
-            maghrib:   newLog.Maghrib,
-            isha:      newLog.Isha,
+            device_id:   deviceId,
+            prayer_date: selDate,
+            prayer_name: name.toLowerCase(),
+            prayed:      newLog[name],
           },
-          { onConflict: 'device_id,date' },
+          { onConflict: 'device_id,prayer_date,prayer_name' },
         );
 
       if (error) {
@@ -282,6 +277,9 @@ export default function TrackerScreen() {
                     isSel && { backgroundColor: palette.gold },
                   ]}
                   activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Select ${label}, ${sub}`}
+                  accessibilityState={{ selected: isSel }}
                 >
                   <Text style={[styles.pillTop, { color: isSel ? palette.onGold : colors.textMuted }]}>
                     {label}
@@ -386,7 +384,9 @@ const styles = StyleSheet.create({
   datePicker: { paddingHorizontal: 12, gap: 8 },
   datePill: {
     width:          58,
+    minHeight:      44,
     alignItems:     'center',
+    justifyContent: 'center',
     borderRadius:   12,
     borderWidth:    1,
     paddingVertical: 8,
