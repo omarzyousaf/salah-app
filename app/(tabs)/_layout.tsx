@@ -13,10 +13,12 @@ export default function TabLayout() {
         tabBarActiveTintColor:   palette.gold,
         tabBarInactiveTintColor: colors.tabInactive,
         tabBarStyle: {
+          position:        'absolute',
           backgroundColor: colors.tabBar,
           borderTopColor:  colors.border,
           borderTopWidth:  1,
         },
+        sceneStyle: { backgroundColor: 'transparent' },
         tabBarLabelStyle: {
           fontSize:      10,
           letterSpacing: 0.4,

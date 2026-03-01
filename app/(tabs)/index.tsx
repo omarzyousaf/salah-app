@@ -495,23 +495,23 @@ export default function PrayerTimesScreen() {
   const timings = prayerData!.timings;
 
   return (
-    // Root is black so any gap before the weather gradient loads stays dark
     <View style={styles.root}>
-      {/* Status bar — light icons, transparent background, full bleed */}
-      <StatusBar style="light" translucent />
+      {/* Status bar — light icons, transparent, full bleed behind weather sky */}
+      <StatusBar style="light" translucent={true} />
 
-      {/* Full-screen animated weather sky — absolute fill behind everything */}
-      <WeatherBackground
-        lat={prayerData!.meta.latitude}
-        lon={prayerData!.meta.longitude}
-        timings={timings}
-        now={now}
-      />
+      {/* Full-screen animated weather sky — absolute fill, behind all content */}
+      <View style={styles.bgLayer}>
+        <WeatherBackground
+          lat={prayerData!.meta.latitude}
+          lon={prayerData!.meta.longitude}
+          timings={timings}
+          now={now}
+        />
+      </View>
 
-      {/* Content — no SafeAreaView wrapper so no background color bleeds at top.
-          paddingTop = status-bar height from safe-area insets pushes content down. */}
+      {/* Content layer — sits on top of weather background */}
       <KeyboardAvoidingView
-        style={styles.flex}
+        style={styles.contentLayer}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
           <ScrollView
@@ -644,9 +644,11 @@ export default function PrayerTimesScreen() {
 
 const styles = StyleSheet.create({
   // Root layers
-  root:          { flex: 1, backgroundColor: '#000' },
-  flex:          { flex: 1 },
-  scroll:        { paddingBottom: 80 },
+  root:         { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  bgLayer:      { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0 },
+  contentLayer: { flex: 1, zIndex: 1 },
+  flex:         { flex: 1 },
+  scroll:       { paddingBottom: 80 },
 
   // Loading / setup screens
   loadingScreen: {

@@ -59,8 +59,17 @@ function RootLayoutNav() {
     }).start();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const CustomDarkTheme = {
+    ...DarkTheme,
+    colors: { ...DarkTheme.colors, background: 'transparent', card: 'transparent' },
+  };
+  const CustomDefaultTheme = {
+    ...DefaultTheme,
+    colors: { ...DefaultTheme.colors, background: '#0a0e1a', card: '#0a0e1a' },
+  };
+
   return (
-    <NavThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
+    <NavThemeProvider value={isDark ? CustomDarkTheme : CustomDefaultTheme}>
       {/* mountFade: one-time fade-in on launch.  transitionOpacity: theme switch cross-fade. */}
       <Animated.View style={{ flex: 1, opacity: mountFade }}>
         <Animated.View style={{ flex: 1, opacity: transitionOpacity }}>
