@@ -1,16 +1,12 @@
 /**
  * AyahCard — displays one Quran ayah: Arabic, transliteration, English.
  * Highlights with a gold tint when isPlaying = true (smooth animated transition).
- *
- * ARABIC FONT: For best Arabic rendering, add the Amiri or Scheherazade New font:
- *   1. Download Amiri-Regular.ttf from https://fonts.google.com/specimen/Amiri
- *   2. Place it in assets/fonts/Amiri-Regular.ttf
- *   3. In app/_layout.tsx, add to useFonts: { Amiri: require('../assets/fonts/Amiri-Regular.ttf') }
- *   4. Change fontFamily below from 'GeezaPro'/'serif' to 'Amiri'
+ * Tappable: press any card to start playback from that ayah.
  */
 
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
-import { Animated, Platform, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { useTheme } from '@/context/ThemeContext';
 
@@ -23,6 +19,10 @@ interface Props {
   english:         string;
   isPlaying?:      boolean;
   isLast?:         boolean;
+  /** Called when user taps the card to start/switch playback */
+  onPress?:        () => void;
+  /** Show a one-time "tap to play" hint — parent hides after first use */
+  showHint?:       boolean;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -32,8 +32,10 @@ export default function AyahCard({
   arabic,
   transliteration,
   english,
-  isPlaying = false,
+  isPlaying  = false,
   isLast,
+  onPress,
+  showHint   = false,
 }: Props) {
   const { colors, palette } = useTheme();
 
@@ -46,7 +48,7 @@ export default function AyahCard({
       duration:        300,
       useNativeDriver: false,
     }).start();
-  }, [isPlaying]);
+  }, [isPlaying]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const animatedBg = highlightAnim.interpolate({
     inputRange:  [0, 1],
@@ -59,57 +61,79 @@ export default function AyahCard({
   });
 
   return (
-    <Animated.View
-      style={[
-        styles.card,
-        {
-          backgroundColor:  animatedBg,
-          borderBottomColor: !isLast ? colors.border : 'transparent',
-          borderLeftColor:   animatedBorder,
-        },
-        !isLast && styles.borderBottom,
-        styles.borderLeft,
-      ]}
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={onPress ? 0.75 : 1}
+      disabled={!onPress}
     >
-      {/* ── Ayah number badge + extending hairline ── */}
-      <View style={styles.badgeRow}>
-        <View
-          style={[
-            styles.badge,
-            {
-              backgroundColor: isPlaying ? 'rgba(200,169,110,0.18)' : 'rgba(200,169,110,0.10)',
-              borderColor:     isPlaying ? 'rgba(200,169,110,0.55)' : 'rgba(200,169,110,0.28)',
-            },
-          ]}
-        >
-          <Text style={[styles.badgeNum, { color: palette.gold }]}>
-            {numberInSurah}
-          </Text>
-        </View>
-        <View style={[styles.badgeLine, { backgroundColor: colors.border }]} />
-      </View>
-
-      {/* ── Arabic text ── */}
-      <Text
-        style={[styles.arabic, { color: colors.text }]}
-        {...(Platform.OS === 'android' ? { textAlign: 'right' } : {})}
+      <Animated.View
+        style={[
+          styles.card,
+          {
+            backgroundColor:   animatedBg,
+            borderBottomColor: !isLast ? colors.border : 'transparent',
+            borderLeftColor:   animatedBorder,
+          },
+          !isLast && styles.borderBottom,
+          styles.borderLeft,
+        ]}
       >
-        {arabic}
-      </Text>
+        {/* ── Ayah number badge + extending hairline + play indicator ── */}
+        <View style={styles.badgeRow}>
+          <View
+            style={[
+              styles.badge,
+              {
+                backgroundColor: isPlaying ? 'rgba(200,169,110,0.18)' : 'rgba(200,169,110,0.10)',
+                borderColor:     isPlaying ? 'rgba(200,169,110,0.55)' : 'rgba(200,169,110,0.28)',
+              },
+            ]}
+          >
+            <Text style={[styles.badgeNum, { color: palette.gold }]}>
+              {numberInSurah}
+            </Text>
+          </View>
+          <View style={[styles.badgeLine, { backgroundColor: colors.border }]} />
+          {/* Subtle play / now-playing icon */}
+          {onPress && (
+            <MaterialCommunityIcons
+              name={isPlaying ? 'volume-high' : 'play-circle-outline'}
+              size={15}
+              color={isPlaying ? palette.gold : 'rgba(200,169,110,0.38)'}
+              style={styles.playIcon}
+            />
+          )}
+        </View>
 
-      {/* ── Thin separator ── */}
-      <View style={[styles.sep, { backgroundColor: colors.border }]} />
+        {/* ── One-time tap hint (first card only) ── */}
+        {showHint && (
+          <Text style={[styles.tapHint, { color: palette.gold }]}>
+            tap any verse to play ›
+          </Text>
+        )}
 
-      {/* ── Transliteration ── */}
-      <Text style={[styles.transliteration, { color: colors.textMuted }]}>
-        {transliteration}
-      </Text>
+        {/* ── Arabic text ── */}
+        <Text
+          style={[styles.arabic, { color: colors.text }]}
+          {...(Platform.OS === 'android' ? { textAlign: 'right' } : {})}
+        >
+          {arabic}
+        </Text>
 
-      {/* ── English translation ── */}
-      <Text style={[styles.english, { color: colors.text }]}>
-        {english}
-      </Text>
-    </Animated.View>
+        {/* ── Thin separator ── */}
+        <View style={[styles.sep, { backgroundColor: colors.border }]} />
+
+        {/* ── Transliteration ── */}
+        <Text style={[styles.transliteration, { color: colors.textMuted }]}>
+          {transliteration}
+        </Text>
+
+        {/* ── English translation ── */}
+        <Text style={[styles.english, { color: colors.text }]}>
+          {english}
+        </Text>
+      </Animated.View>
+    </TouchableOpacity>
   );
 }
 
@@ -155,6 +179,19 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     opacity:    0.7,
   },
+  playIcon: {
+    marginLeft: 8,
+  },
+
+  // One-time hint
+  tapHint: {
+    fontSize:      10,
+    fontWeight:    '400',
+    letterSpacing: 0.8,
+    opacity:       0.55,
+    marginTop:     -10,
+    marginBottom:  12,
+  },
 
   // Arabic — large, right-aligned, RTL
   arabic: {
@@ -167,7 +204,7 @@ const styles = StyleSheet.create({
     letterSpacing:    0.5,
   },
 
-  // Thin ornamental separator between Arabic and transliteration
+  // Thin ornamental separator
   sep: {
     height:       StyleSheet.hairlineWidth,
     marginBottom: 14,

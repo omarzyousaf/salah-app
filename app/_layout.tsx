@@ -71,19 +71,19 @@ function RootLayoutNav() {
   return (
     <NavThemeProvider value={isDark ? CustomDarkTheme : CustomDefaultTheme}>
       {/* mountFade: one-time fade-in on launch.  transitionOpacity: theme switch cross-fade. */}
-      <Animated.View style={{ flex: 1, opacity: mountFade }}>
-        <Animated.View style={{ flex: 1, opacity: transitionOpacity }}>
+      <Animated.View style={{ flex: 1, opacity: mountFade, backgroundColor: 'transparent' }}>
+        <Animated.View style={{ flex: 1, opacity: transitionOpacity, backgroundColor: 'transparent' }}>
           {/* Global offline banner — overlays all screens */}
           <OfflineBanner />
-          <Stack>
-          <Stack.Screen name="(tabs)"          options={{ headerShown: false }} />
-          <Stack.Screen name="more/hadith"     options={{ headerShown: false }} />
-          <Stack.Screen name="more/duas"       options={{ headerShown: false }} />
-          <Stack.Screen name="more/chat"       options={{ headerShown: false }} />
-          <Stack.Screen name="more/settings"   options={{ headerShown: false }} />
-          <Stack.Screen name="quran/[surah]"   options={{ headerShown: false }} />
-          <Stack.Screen name="modal"           options={{ presentation: 'modal' }} />
-        </Stack>
+          <Stack screenOptions={{ contentStyle: { backgroundColor: 'transparent' }, headerShown: false }}>
+            <Stack.Screen name="(tabs)"        />
+            <Stack.Screen name="more/hadith"   />
+            <Stack.Screen name="more/duas"     />
+            <Stack.Screen name="more/chat"     />
+            <Stack.Screen name="more/settings" />
+            <Stack.Screen name="quran/[surah]" />
+            <Stack.Screen name="modal"         options={{ presentation: 'modal', headerShown: true }} />
+          </Stack>
         </Animated.View>
       </Animated.View>
     </NavThemeProvider>
