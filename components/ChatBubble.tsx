@@ -6,10 +6,23 @@
  *
  * Markdown support: **bold**, *italic*, - bullet lists, blank-line spacing.
  * Fade-in animation (220ms) on mount.
+ *
+ * AI bubbles include:
+ *  • Blinking cursor while isStreaming
+ *  • Copy-to-clipboard + Share buttons that fade in once streaming ends
  */
 
-import { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 import { useTheme } from '@/context/ThemeContext';
 import type { ChatMessage } from '@/services/anthropic';
@@ -122,16 +135,51 @@ interface Props {
 
 export default function ChatBubble({ message, isStreaming = false }: Props) {
   const { colors, palette } = useTheme();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const isUser   = message.role === 'user';
+  const fadeAnim   = useRef(new Animated.Value(0)).current;
+  const cursorAnim = useRef(new Animated.Value(1)).current;
+  const isUser     = message.role === 'user';
 
+  const [copied, setCopied] = useState(false);
+
+  // ── Bubble fade-in on mount ──────────────────────────────────────────────────
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue:         1,
       duration:        220,
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Cursor blink while streaming ─────────────────────────────────────────────
+  useEffect(() => {
+    if (!isStreaming) {
+      cursorAnim.setValue(0);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(cursorAnim, { toValue: 0,   duration: 500, useNativeDriver: true }),
+        Animated.timing(cursorAnim, { toValue: 1,   duration: 500, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [isStreaming]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Copy / Share ─────────────────────────────────────────────────────────────
+  async function handleCopy() {
+    try {
+      await Clipboard.setStringAsync(message.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {}
+  }
+
+  async function handleShare() {
+    try {
+      await Share.share({ message: message.content });
+    } catch {}
+  }
 
   const textColor  = isUser ? palette.onGold : colors.text;
   const mutedColor = isUser ? 'rgba(28,26,23,0.55)' : colors.textMuted;
@@ -170,8 +218,41 @@ export default function ChatBubble({ message, isStreaming = false }: Props) {
       >
         <BubbleContent text={message.content} textColor={textColor} mutedColor={mutedColor} />
 
-        {/* Blinking cursor while streaming */}
-        {isStreaming && !isUser && <View style={styles.cursor} />}
+        {/* ── Blinking cursor while streaming ── */}
+        {isStreaming && !isUser && (
+          <Animated.View style={[styles.cursor, { opacity: cursorAnim }]} />
+        )}
+
+        {/* ── Copy & Share (AI bubbles only, hidden while streaming) ── */}
+        {!isStreaming && !isUser && (
+          <View style={[styles.actionRow, { borderTopColor: colors.border }]}>
+            <TouchableOpacity
+              onPress={handleCopy}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              activeOpacity={0.6}
+              accessibilityLabel={copied ? 'Copied' : 'Copy message'}
+            >
+              <MaterialCommunityIcons
+                name={copied ? 'check' : 'content-copy'}
+                size={14}
+                color={copied ? '#6BC17A' : 'rgba(140,140,140,0.65)'}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleShare}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              activeOpacity={0.6}
+              accessibilityLabel="Share message"
+            >
+              <MaterialCommunityIcons
+                name="share-variant"
+                size={14}
+                color="rgba(140,140,140,0.65)"
+              />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </Animated.View>
   );
@@ -232,13 +313,23 @@ const styles = StyleSheet.create({
   // Blank line spacer inside bubble
   emptyLine: { height: 8 },
 
-  // Streaming cursor
+  // Blinking streaming cursor
   cursor: {
-    width:        2,
-    height:       14,
-    borderRadius: 1,
-    backgroundColor: 'rgba(200,169,110,0.7)',
-    marginTop:    4,
-    marginLeft:   2,
+    width:           2,
+    height:          14,
+    borderRadius:    1,
+    backgroundColor: 'rgba(200,169,110,0.8)',
+    marginTop:       4,
+    marginLeft:      2,
+  },
+
+  // Copy / Share action row
+  actionRow: {
+    flexDirection:  'row',
+    justifyContent: 'flex-end',
+    gap:            12,
+    marginTop:      8,
+    paddingTop:     6,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
 });

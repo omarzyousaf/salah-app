@@ -19,6 +19,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import { useEffect, useRef, useState } from 'react';
+import { StatusBar } from 'expo-status-bar';
 import {
   Alert,
   Animated,
@@ -26,14 +27,13 @@ import {
   Platform,
   RefreshControl,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import SunArc from '@/components/SunArc';
 import WeatherBackground from '@/components/WeatherBackground';
@@ -188,55 +188,58 @@ function CountdownBlock({ nextPrayer, timings, now }: CountdownBlockProps) {
 const cd = StyleSheet.create({
   container: {
     alignItems:    'center',
-    paddingTop:    8,
-    paddingBottom: 24,
+    paddingTop:    4,
+    paddingBottom: 20,
   },
   labelRow: {
     flexDirection: 'row',
     alignItems:    'center',
     gap:           7,
-    marginBottom:  10,
+    marginBottom:  8,
   },
   dot: {
-    width:           6,
-    height:          6,
+    width:           5,
+    height:          5,
     borderRadius:    3,
     backgroundColor: GOLD,
   },
   label: {
-    fontSize:      11,
+    fontSize:      13,
+    fontWeight:    '600',
     letterSpacing: 3,
     textTransform: 'uppercase',
-    color:         TEXT_MUTED,
+    color:         'rgba(255,255,255,0.80)',
   },
   digitRow: {
     flexDirection: 'row',
     alignItems:    'flex-end',
-    gap:           2,
+    gap:           0,
   },
   unit: {
     alignItems: 'center',
-    width:      68,
+    width:      76,
   },
   digit: {
-    fontSize:      62,
+    fontSize:      72,
     fontWeight:    '200',
     color:         TEXT_PRIMARY,
-    letterSpacing: -2,
-    lineHeight:    66,
+    letterSpacing: -3,
+    lineHeight:    76,
   },
   unitLabel: {
-    fontSize:      9,
-    letterSpacing: 3,
-    color:         TEXT_DIM,
-    marginTop:     3,
+    fontSize:      11,
+    fontWeight:    '300',
+    letterSpacing: 2,
+    color:         'rgba(255,255,255,0.50)',
+    marginTop:     2,
   },
   colon: {
-    fontSize:      48,
+    fontSize:      56,
     fontWeight:    '200',
     color:         TEXT_DIM,
-    marginBottom:  14,
-    lineHeight:    66,
+    marginBottom:  16,
+    lineHeight:    76,
+    paddingHorizontal: 2,
   },
 });
 
@@ -278,8 +281,8 @@ const rb = StyleSheet.create({
     marginHorizontal:  20,
   },
   moon:  { fontSize: 22 },
-  title: { fontSize: 13, fontWeight: '600', letterSpacing: 0.3, color: GOLD },
-  sub:   { fontSize: 12, marginTop: 2, letterSpacing: 0.2, color: TEXT_MUTED },
+  title: { fontSize: 15, fontWeight: '400', letterSpacing: 0.3, color: GOLD },
+  sub:   { fontSize: 13, fontWeight: '400', marginTop: 2, letterSpacing: 0.2, color: TEXT_MUTED },
 });
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
@@ -287,6 +290,8 @@ const rb = StyleSheet.create({
 type ScreenStatus = 'init' | 'loading' | 'error' | 'no_location' | 'success';
 
 export default function PrayerTimesScreen() {
+  const insets = useSafeAreaInsets();
+
   // Screen state
   const [status,       setStatus]       = useState<ScreenStatus>('init');
   const [errorMsg,     setErrorMsg]     = useState('');
@@ -490,11 +495,12 @@ export default function PrayerTimesScreen() {
   const timings = prayerData!.timings;
 
   return (
-    // Root is black so any tiny gap before WeatherBackground renders is safe
+    // Root is black so any gap before the weather gradient loads stays dark
     <View style={styles.root}>
-      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      {/* Status bar — light icons, transparent background, full bleed */}
+      <StatusBar style="light" translucent />
 
-      {/* Full-screen animated weather sky */}
+      {/* Full-screen animated weather sky — absolute fill behind everything */}
       <WeatherBackground
         lat={prayerData!.meta.latitude}
         lon={prayerData!.meta.longitude}
@@ -502,14 +508,14 @@ export default function PrayerTimesScreen() {
         now={now}
       />
 
-      {/* SafeAreaView — only provides insets, no background color */}
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
+      {/* Content — no SafeAreaView wrapper so no background color bleeds at top.
+          paddingTop = status-bar height from safe-area insets pushes content down. */}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
           <ScrollView
-            contentContainerStyle={styles.scroll}
+            contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 8 }]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             refreshControl={
@@ -630,7 +636,6 @@ export default function PrayerTimesScreen() {
 
           </ScrollView>
         </KeyboardAvoidingView>
-      </SafeAreaView>
     </View>
   );
 }
@@ -640,9 +645,8 @@ export default function PrayerTimesScreen() {
 const styles = StyleSheet.create({
   // Root layers
   root:          { flex: 1, backgroundColor: '#000' },
-  safe:          { flex: 1, backgroundColor: 'transparent' },
   flex:          { flex: 1 },
-  scroll:        { paddingBottom: 48 },
+  scroll:        { paddingBottom: 80 },
 
   // Loading / setup screens
   loadingScreen: {
@@ -672,17 +676,17 @@ const styles = StyleSheet.create({
 
   // Date + city header (centered)
   header: {
-    alignItems:   'center',
-    paddingTop:   12,
-    paddingBottom: 4,
+    alignItems:        'center',
+    paddingTop:        4,
+    paddingBottom:     4,
     paddingHorizontal: 20,
   },
   hijri: {
-    fontSize:      22,
+    fontSize:      28,
     fontWeight:    '300',
     letterSpacing: 1,
-    color:         TEXT_PRIMARY,
-    marginBottom:  6,
+    color:         'rgba(255,255,255,1)',
+    marginBottom:  4,
     textAlign:     'center',
   },
   cityRow: {
@@ -691,9 +695,10 @@ const styles = StyleSheet.create({
     gap:           4,
   },
   cityLabel: {
-    fontSize:      13,
+    fontSize:      14,
+    fontWeight:    '300',
     letterSpacing: 0.2,
-    color:         TEXT_MUTED,
+    color:         'rgba(255,255,255,0.7)',
     flexShrink:    1,
   },
 
@@ -716,9 +721,9 @@ const styles = StyleSheet.create({
   cardAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: GOLD },
   cardIcon:   { marginRight: 13 },
   cardBody:   { flex: 1 },
-  cardName:   { fontSize: 15, fontWeight: '500', letterSpacing: 0.3 },
-  cardNext:   { fontSize: 9, letterSpacing: 0.8, fontWeight: '600', color: GOLD, marginTop: 2 },
-  cardTime:   { fontSize: 16, fontWeight: '300', fontFamily: 'SpaceMono', letterSpacing: 0.5 },
+  cardName:   { fontSize: 16, fontWeight: '400', letterSpacing: 0.2 },
+  cardNext:   { fontSize: 9,  letterSpacing: 0.8, fontWeight: '500', color: GOLD, marginTop: 2 },
+  cardTime:   { fontSize: 16, fontWeight: '300', letterSpacing: 0.4 },
 
   // GPS button
   gpsBtn: {

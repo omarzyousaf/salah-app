@@ -83,11 +83,16 @@ async function bumpCount(): Promise<void> {
 
 // ─── Non-streaming fallback ───────────────────────────────────────────────────
 
-async function fetchComplete(messages: ChatMessage[], device_id: string): Promise<string> {
+async function fetchComplete(
+  messages:  ChatMessage[],
+  device_id: string,
+  signal?:   AbortSignal,
+): Promise<string> {
   const res = await fetch(CHAT_ENDPOINT, {
     method:  'POST',
     headers: AUTH_HEADERS,
     body:    JSON.stringify({ messages, device_id, stream: false }),
+    signal,
   });
 
   if (!res.ok) {
@@ -111,8 +116,9 @@ export async function streamMessage(params: {
   onDelta:    (chunk: string) => void;
   onComplete: (fullText: string) => void;
   onError:    (msg: string) => void;
+  signal?:    AbortSignal;
 }): Promise<void> {
-  const { messages, onDelta, onComplete, onError } = params;
+  const { messages, onDelta, onComplete, onError, signal } = params;
 
   // Local gate (server also enforces)
   const info = await getCountInfo();
@@ -127,9 +133,10 @@ export async function streamMessage(params: {
   // ── Non-streaming path (iOS / known-unsupported devices) ────────────────────
   if (_streamingSupported === false) {
     try {
-      const text = await fetchComplete(messages, device_id);
+      const text = await fetchComplete(messages, device_id, signal);
       onComplete(text);
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return;
       onError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     }
     return;
@@ -142,8 +149,10 @@ export async function streamMessage(params: {
       method:  'POST',
       headers: AUTH_HEADERS,
       body:    JSON.stringify({ messages, device_id }),
+      signal,
     });
-  } catch {
+  } catch (e) {
+    if (e instanceof Error && e.name === 'AbortError') return;
     onError('No internet connection. Please check your network and try again.');
     return;
   }
@@ -166,9 +175,10 @@ export async function streamMessage(params: {
     // fall back to a separate non-streaming request.
     _streamingSupported = false;
     try {
-      const text = await fetchComplete(messages, device_id);
+      const text = await fetchComplete(messages, device_id, signal);
       onComplete(text);
     } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') return;
       onError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
     }
     return;
@@ -212,7 +222,12 @@ export async function streamMessage(params: {
         }
       }
     }
-  } catch {
+  } catch (e) {
+    // AbortError = user cancelled — commit whatever we streamed so far
+    if (e instanceof Error && e.name === 'AbortError') {
+      onComplete(fullText);
+      return;
+    }
     onError('Connection interrupted. Please try again.');
     return;
   } finally {

@@ -123,6 +123,10 @@ export default function ChatScreen() {
 
   const scrollRef    = useRef<ScrollView>(null);
   const streamBuffer = useRef('');
+  const abortRef     = useRef<AbortController | null>(null);
+  const typeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Guards against double-commit if abort and onComplete race
+  const doneRef      = useRef(false);
 
   // Load count info on mount
   useEffect(() => {
@@ -138,7 +142,53 @@ export default function ChatScreen() {
     if (messages.length > 0) {
       setTimeout(() => scrollToBottom(true), 80);
     }
-  }, [messages.length]);
+  }, [messages.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      if (typeTimerRef.current) clearInterval(typeTimerRef.current);
+    };
+  }, []);
+
+  // ── Commit a finished (or partial) AI message ─────────────────────────────
+
+  function commitMessage(text: string) {
+    if (doneRef.current) return;
+    doneRef.current = true;
+
+    if (!text.trim()) {
+      // Nothing to show (e.g. aborted before any content arrived)
+      setIsLoading(false);
+      setStreamingText('');
+      return;
+    }
+
+    const aiMsg: ChatMessage = { role: 'assistant', content: text };
+    setMessages(prev => [...prev, aiMsg]);
+    setStreamingText('');
+    setIsLoading(false);
+    getCountInfo().then(setCountInfo);
+    setTimeout(() => scrollToBottom(true), 80);
+  }
+
+  // ── Stop current generation ────────────────────────────────────────────────
+
+  function handleStop() {
+    if (typeTimerRef.current) {
+      // Simulated typing is in progress — cancel it and commit whatever is visible
+      clearInterval(typeTimerRef.current);
+      typeTimerRef.current = null;
+      // streamingText is the current partial revealed text
+      commitMessage(streamingText);
+    } else {
+      // Real streaming fetch — abort the request; onComplete will commit partial
+      abortRef.current?.abort();
+    }
+  }
+
+  // ── Send a message ─────────────────────────────────────────────────────────
 
   async function handleSend(text?: string) {
     const content = (text ?? input).trim();
@@ -147,17 +197,24 @@ export default function ChatScreen() {
     setError(null);
     setInput('');
 
-    const userMsg: ChatMessage  = { role: 'user', content };
-    const next: ChatMessage[]   = [...messages, userMsg];
+    const userMsg: ChatMessage = { role: 'user', content };
+    const next: ChatMessage[]  = [...messages, userMsg];
     setMessages(next);
     setIsLoading(true);
     streamBuffer.current = '';
     setStreamingText('');
+    doneRef.current = false;
+
+    // Cancel any lingering previous request
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
 
     setTimeout(() => scrollToBottom(true), 80);
 
     await streamMessage({
       messages: next,
+      signal:   ctrl.signal,
 
       onDelta(chunk) {
         streamBuffer.current += chunk;
@@ -166,12 +223,42 @@ export default function ChatScreen() {
       },
 
       onComplete(fullText) {
-        const aiMsg: ChatMessage = { role: 'assistant', content: fullText || streamBuffer.current };
-        setMessages(prev => [...prev, aiMsg]);
-        setStreamingText('');
-        setIsLoading(false);
-        getCountInfo().then(setCountInfo);
-        setTimeout(() => scrollToBottom(true), 80);
+        const finalText = fullText || streamBuffer.current;
+
+        // Real streaming occurred — commit immediately
+        if (streamBuffer.current.length > 0) {
+          commitMessage(finalText);
+          return;
+        }
+
+        // Non-streaming fallback: reveal words one by one (simulated typing)
+        // Split on whitespace boundaries, keeping the spaces so text looks natural
+        const tokens = finalText.split(/(\s+)/);
+        let idx      = 0;
+        let revealed = '';
+
+        if (typeTimerRef.current) clearInterval(typeTimerRef.current);
+
+        typeTimerRef.current = setInterval(() => {
+          // Signal fired between ticks — commit partial and stop
+          if (ctrl.signal.aborted) {
+            clearInterval(typeTimerRef.current!);
+            typeTimerRef.current = null;
+            commitMessage(revealed);
+            return;
+          }
+
+          revealed += tokens[idx] ?? '';
+          idx++;
+          setStreamingText(revealed);
+          scrollToBottom(false);
+
+          if (idx >= tokens.length) {
+            clearInterval(typeTimerRef.current!);
+            typeTimerRef.current = null;
+            commitMessage(finalText);
+          }
+        }, 22);
       },
 
       onError(msg) {
@@ -343,21 +430,37 @@ export default function ChatScreen() {
               editable={!isLimitReached}
             />
 
-            <TouchableOpacity
-              style={[
-                styles.sendBtn,
-                { backgroundColor: canSend ? palette.gold : colors.cardAlt },
-              ]}
-              onPress={() => handleSend()}
-              disabled={!canSend}
-              activeOpacity={0.75}
-            >
-              <MaterialCommunityIcons
-                name="send"
-                size={18}
-                color={canSend ? palette.onGold : colors.tabInactive}
-              />
-            </TouchableOpacity>
+            {isLoading ? (
+              /* ── Stop button — cancels current generation ── */
+              <TouchableOpacity
+                style={[styles.sendBtn, { backgroundColor: colors.cardAlt }]}
+                onPress={handleStop}
+                activeOpacity={0.75}
+                accessibilityLabel="Stop generating"
+                accessibilityRole="button"
+              >
+                <View style={[styles.stopIcon, { backgroundColor: colors.text }]} />
+              </TouchableOpacity>
+            ) : (
+              /* ── Send button ── */
+              <TouchableOpacity
+                style={[
+                  styles.sendBtn,
+                  { backgroundColor: canSend ? palette.gold : colors.cardAlt },
+                ]}
+                onPress={() => handleSend()}
+                disabled={!canSend}
+                activeOpacity={0.75}
+                accessibilityLabel="Send message"
+                accessibilityRole="button"
+              >
+                <MaterialCommunityIcons
+                  name="send"
+                  size={18}
+                  color={canSend ? palette.onGold : colors.tabInactive}
+                />
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Character counter — shown above 80% */}
@@ -506,6 +609,11 @@ const styles = StyleSheet.create({
     alignItems:     'center',
     justifyContent: 'center',
     flexShrink:     0,
+  },
+  stopIcon: {
+    width:        14,
+    height:       14,
+    borderRadius: 3,
   },
   charCount: { fontSize: 10, textAlign: 'right', marginTop: 4, letterSpacing: 0.2 },
 });

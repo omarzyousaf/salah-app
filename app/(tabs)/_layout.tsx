@@ -31,7 +31,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Prayer',
+          title:        'Prayer',
+          headerShown:  false,
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="mosque" size={size} color={color} />
           ),

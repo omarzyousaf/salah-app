@@ -5,13 +5,14 @@
  *   1. Time-of-day base gradient   — 8 prayer-relative periods, renders immediately
  *   2. Weather condition overlays  — loads after Open-Meteo responds
  *
- * Designed to look like Apple Weather: the gradient IS the background;
- * all other UI layers render on top of it.
+ * Sky gradients are derived from the user's actual prayer times (Fajr, Sunrise,
+ * Dhuhr, Asr, Maghrib, Isha), not hardcoded wall-clock hours.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Animated, StyleSheet, useWindowDimensions, View } from 'react-native';
-import Svg, { Defs, LinearGradient, Rect, Stop, RadialGradient } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
+import { useState } from 'react';
 
 import { PrayerTimings, toMinutes } from '@/services/prayerTimes';
 import { WeatherCondition, fetchWeather } from '@/services/weather';
@@ -55,67 +56,68 @@ function getPeriod(timings: PrayerTimings, nowMin: number): Period {
   return 'night';
 }
 
-// ─── Sky gradients (full opacity — these ARE the background) ─────────────────
+// ─── Sky gradients ────────────────────────────────────────────────────────────
 
 type GradStop = { off: number; color: string };
 
 const SKY: Record<Period, GradStop[]> = {
+  // Pre-Fajr / deep night
   predawn: [
-    { off: 0,    color: '#010408' },
-    { off: 0.28, color: '#060D24' },
-    { off: 0.55, color: '#0C1838' },
-    { off: 0.78, color: '#12203F' },
-    { off: 1,    color: '#1A2B4A' },
+    { off: 0,    color: '#0a0e1a' },
+    { off: 0.35, color: '#111b2e' },
+    { off: 0.70, color: '#1a2540' },
+    { off: 1,    color: '#1e2d4a' },
   ],
+  // Fajr → Sunrise: indigo fading to warm horizon glow
   sunrise: [
-    { off: 0,    color: '#080C22' },
-    { off: 0.20, color: '#3E1248' },
-    { off: 0.46, color: '#B83328' },
-    { off: 0.72, color: '#E86020' },
-    { off: 1,    color: '#F5A050' },
+    { off: 0,    color: '#1a2540' },
+    { off: 0.40, color: '#2d4a6e' },
+    { off: 0.72, color: '#8a5a6e' },
+    { off: 1,    color: '#d4956b' },
   ],
+  // Sunrise → Dhuhr: clear morning blue
   morning: [
-    { off: 0,    color: '#0D5EB0' },
-    { off: 0.40, color: '#2090D0' },
-    { off: 0.75, color: '#55B8E8' },
-    { off: 1,    color: '#90D4F0' },
+    { off: 0,    color: '#4a8bc2' },
+    { off: 0.38, color: '#6bb3d9' },
+    { off: 0.72, color: '#87ceeb' },
+    { off: 1,    color: '#a8e0f0' },
   ],
+  // Dhuhr → Asr: vivid midday blue with lavender hint
   midday: [
-    { off: 0,    color: '#0660BE' },
-    { off: 0.45, color: '#1488D8' },
-    { off: 0.80, color: '#40B0EE' },
-    { off: 1,    color: '#70CCF8' },
+    { off: 0,    color: '#3d7cb8' },
+    { off: 0.50, color: '#5a9fd4' },
+    { off: 1,    color: '#c8a2c8' },
   ],
+  // Asr → Maghrib: late-afternoon warm blend
   afternoon: [
-    { off: 0,    color: '#0A58A8' },
-    { off: 0.45, color: '#2080C0' },
-    { off: 0.80, color: '#58AAD4' },
-    { off: 1,    color: '#85C4E0' },
+    { off: 0,    color: '#3d5a80' },
+    { off: 0.32, color: '#7b6b8a' },
+    { off: 0.65, color: '#c4849b' },
+    { off: 1,    color: '#e8a87c' },
   ],
+  // Around Maghrib: dramatic sunset
   sunset: [
-    { off: 0,    color: '#150830' },
-    { off: 0.20, color: '#7A1545' },
-    { off: 0.45, color: '#CC3018' },
-    { off: 0.70, color: '#EC6820' },
-    { off: 1,    color: '#F5A545' },
+    { off: 0,    color: '#2a2d5e' },
+    { off: 0.25, color: '#6b4c7a' },
+    { off: 0.55, color: '#c76b7e' },
+    { off: 1,    color: '#e89b6c' },
   ],
+  // Maghrib → Isha: deepening twilight
   evening: [
-    { off: 0,    color: '#040310' },
-    { off: 0.30, color: '#100828' },
-    { off: 0.58, color: '#1C0E42' },
-    { off: 0.82, color: '#20144E' },
-    { off: 1,    color: '#2A1C5A' },
+    { off: 0,    color: '#141832' },
+    { off: 0.48, color: '#252850' },
+    { off: 1,    color: '#3d2d5e' },
   ],
+  // After Isha: deep night sky
   night: [
-    { off: 0,    color: '#010206' },
-    { off: 0.30, color: '#03060F' },
-    { off: 0.60, color: '#050B1C' },
-    { off: 0.85, color: '#080F24' },
-    { off: 1,    color: '#0D1530' },
+    { off: 0,    color: '#080c18' },
+    { off: 0.30, color: '#0f1628' },
+    { off: 0.65, color: '#182038' },
+    { off: 1,    color: '#1e2d4a' },
   ],
 };
 
-// ─── Weather overlay (semi-transparent tint on top of base gradient) ──────────
+// ─── Weather overlay tint ─────────────────────────────────────────────────────
 
 type Overlay = { color: string; op: number };
 
@@ -123,35 +125,48 @@ function getOverlay(cond: WeatherCondition | null): Overlay {
   if (!cond) return { color: '#000', op: 0 };
   switch (cond) {
     case 'clear':        return { color: '#000000', op: 0    };
-    case 'cloudy':       return { color: '#505870', op: 0.34 };
-    case 'fog':          return { color: '#C8D8E8', op: 0.28 };
-    case 'rain':         return { color: '#142840', op: 0.44 };
-    case 'snow':         return { color: '#A8C0DC', op: 0.22 };
-    case 'thunderstorm': return { color: '#080F1E', op: 0.58 };
+    case 'cloudy':       return { color: '#505870', op: 0.30 };
+    case 'fog':          return { color: '#C8D8E8', op: 0.25 };
+    case 'rain':         return { color: '#142840', op: 0.40 };
+    case 'snow':         return { color: '#A8C0DC', op: 0.20 };
+    case 'thunderstorm': return { color: '#080F1E', op: 0.55 };
   }
 }
 
-// ─── Deterministic pseudo-random (no Math.random in render) ──────────────────
+// ─── Deterministic pseudo-random ──────────────────────────────────────────────
 
 function pr(seed: number): number {
   const x = Math.sin(seed + 1) * 10000;
   return x - Math.floor(x);
 }
 
+// ─── Organic cloud SVG path shapes (200×80 viewBox) ──────────────────────────
+
+const CLOUD_SHAPES = [
+  // Puffy cumulus
+  'M 0 72 C 5 52 15 42 30 50 C 28 22 55 14 80 30 C 82 6 115 2 135 22 C 148 6 172 10 182 32 C 194 36 200 52 200 70 L 200 72 Z',
+  // Wispy stratus
+  'M 0 68 C 8 46 24 40 48 52 C 50 16 82 12 108 34 C 118 8 150 6 170 28 C 182 18 196 32 200 58 L 200 68 Z',
+  // Layered alto
+  'M 0 75 C 10 58 22 50 40 56 C 38 22 68 16 95 36 C 98 8 130 6 154 26 C 165 10 186 14 200 40 L 200 75 Z',
+  // Thin cirrus-like
+  'M 0 65 C 12 48 30 44 55 54 C 58 20 90 16 118 38 C 128 12 158 8 178 32 C 188 22 198 36 200 62 L 200 65 Z',
+];
+
 // ─── Particle config builders ─────────────────────────────────────────────────
 
-const N_STARS  = 48;
+const N_STARS  = 28;
 const N_RAIN   = 30;
-const N_SNOW   = 24;
-const N_CLOUDS = 6;
+const N_SNOW   = 22;
+const N_CLOUDS = 5;
 const N_FOG    = 3;
 
 function buildStars(W: number, H: number) {
   return Array.from({ length: N_STARS }, (_, i) => ({
     x:        pr(i * 5 + 0) * W,
-    y:        pr(i * 5 + 1) * H * 0.78,
-    r:        0.7 + pr(i * 5 + 2) * 2.2,
-    duration: 1600 + pr(i * 5 + 3) * 2400,
+    y:        pr(i * 5 + 1) * H * 0.72,   // upper 72% of screen
+    r:        0.5 + pr(i * 5 + 2) * 1.5,  // 0.5–2 px radius
+    duration: 2000 + pr(i * 5 + 3) * 3000,
     init:     pr(i * 5 + 4),
   }));
 }
@@ -159,44 +174,45 @@ function buildStars(W: number, H: number) {
 function buildRain(W: number, H: number) {
   return Array.from({ length: N_RAIN }, (_, i) => ({
     x:        pr(i * 7 + 0) * W,
-    w:        0.9 + pr(i * 7 + 1) * 0.8,
-    h:        14  + pr(i * 7 + 2) * 14,
-    duration: 480  + pr(i * 7 + 3) * 420,
+    w:        0.8 + pr(i * 7 + 1) * 0.7,
+    h:        12 + pr(i * 7 + 2) * 12,
+    duration: 500 + pr(i * 7 + 3) * 400,
     delay:    pr(i * 7 + 4),
-    opacity:  0.32 + pr(i * 7 + 5) * 0.36,
-    tiltX:    (pr(i * 7 + 6) - 0.5) * 14,
+    opacity:  0.25 + pr(i * 7 + 5) * 0.30,
+    tiltX:    (pr(i * 7 + 6) - 0.5) * 12,
   }));
 }
 
 function buildSnow(W: number, H: number) {
   return Array.from({ length: N_SNOW }, (_, i) => ({
     x:        pr(i * 11 + 0) * W,
-    r:        2.5 + pr(i * 11 + 1) * 3.5,
-    duration: 3500 + pr(i * 11 + 2) * 3000,
+    r:        2 + pr(i * 11 + 1) * 3,
+    duration: 4000 + pr(i * 11 + 2) * 3500,
     delay:    pr(i * 11 + 3),
-    opacity:  0.55 + pr(i * 11 + 4) * 0.35,
-    driftX:   (pr(i * 11 + 5) - 0.5) * 65,
+    opacity:  0.50 + pr(i * 11 + 4) * 0.35,
+    driftX:   (pr(i * 11 + 5) - 0.5) * 55,
   }));
 }
 
 function buildClouds(W: number, H: number) {
   return Array.from({ length: N_CLOUDS }, (_, i) => ({
-    y:        pr(i * 13 + 0) * H * 0.52,
-    w:        190 + pr(i * 13 + 1) * 170,
-    h:        65  + pr(i * 13 + 2) * 75,
-    duration: 11000 + pr(i * 13 + 3) * 19000,
+    y:        pr(i * 13 + 0) * H * 0.42,  // upper 42% of screen
+    w:        220 + pr(i * 13 + 1) * 160, // 220–380 px wide
+    h:        70  + pr(i * 13 + 2) * 55,  // 70–125 px tall
+    duration: 18000 + pr(i * 13 + 3) * 28000, // very slow: 18–46 s
     startX:   pr(i * 13 + 4) * W,
-    opacity:  0.16 + pr(i * 13 + 5) * 0.16,
+    opacity:  0.14 + pr(i * 13 + 5) * 0.12, // subtle: 0.14–0.26
+    shape:    i % CLOUD_SHAPES.length,
   }));
 }
 
 function buildFog(W: number, H: number) {
   return Array.from({ length: N_FOG }, (_, i) => ({
-    y:  H * 0.08 + pr(i * 17 + 0) * H * 0.65,
-    w:  W * 0.70 + pr(i * 17 + 1) * W * 0.55,
-    h:  90  + pr(i * 17 + 2) * 85,
-    x:  pr(i * 17 + 3) * W * 0.35,
-    dur: 4000 + pr(i * 17 + 4) * 3200,
+    y:   H * 0.10 + pr(i * 17 + 0) * H * 0.60,
+    w:   W * 0.70 + pr(i * 17 + 1) * W * 0.55,
+    h:   85  + pr(i * 17 + 2) * 80,
+    x:   pr(i * 17 + 3) * W * 0.30,
+    dur: 4500 + pr(i * 17 + 4) * 3000,
   }));
 }
 
@@ -215,21 +231,22 @@ export default function WeatherBackground({ lat, lon, timings, now }: Props) {
 
   // ── Period & overlay ───────────────────────────────────────────────────────
 
-  const nowMin      = now.getHours() * 60 + now.getMinutes();
-  const period      = getPeriod(timings, nowMin);
-  const isNight     = period === 'predawn' || period === 'evening' || period === 'night';
-  const isSunEvent  = period === 'sunrise' || period === 'sunset';
-  const gradStops   = SKY[period];
-  const overlay     = getOverlay(condition);
-  const showClouds  = !!condition && condition !== 'clear' && condition !== 'snow';
+  const nowMin     = now.getHours() * 60 + now.getMinutes();
+  const period     = getPeriod(timings, nowMin);
+  // Stars only during deep night periods — not evening
+  const showStars  = period === 'predawn' || period === 'night';
+  const isSunEvent = period === 'sunrise' || period === 'sunset';
+  const gradStops  = SKY[period];
+  const overlay    = getOverlay(condition);
+  const showClouds = !!condition && condition !== 'clear' && condition !== 'snow';
 
-  // Horizon glow: warm for sunrise/sunset, cool blue for day, subtle indigo for night
-  const horizonGlowColor = isSunEvent
-    ? 'rgba(255,140,60,0.22)'
-    : isNight
-      ? 'rgba(40,55,120,0.30)'
-      : 'rgba(80,160,220,0.18)';
-  const horizonH = H * 0.38;
+  // Horizon atmosphere glow (bottom 35%)
+  const horizonColor = isSunEvent
+    ? 'rgba(240,130,60,0.20)'
+    : showStars
+      ? 'rgba(30,50,110,0.28)'
+      : 'rgba(80,150,210,0.14)';
+  const horizonH = H * 0.36;
 
   // ── Stable particle configs ────────────────────────────────────────────────
 
@@ -248,10 +265,10 @@ export default function WeatherBackground({ lat, lon, timings, now }: Props) {
   const flashAnim  = useRef(new Animated.Value(0)).current;
   const fogAnims   = useRef(Array.from({ length: N_FOG },    () => new Animated.Value(0))).current;
 
-  // ── Stars — predawn / evening / night ─────────────────────────────────────
+  // ── Stars — predawn + night only ──────────────────────────────────────────
 
   useEffect(() => {
-    if (!isNight) {
+    if (!showStars) {
       starAnims.forEach(a => a.stopAnimation());
       return;
     }
@@ -260,14 +277,14 @@ export default function WeatherBackground({ lat, lon, timings, now }: Props) {
       const loop = Animated.loop(
         Animated.sequence([
           Animated.timing(anim, { toValue: 1,    duration: stars[i].duration * 0.5, useNativeDriver: true }),
-          Animated.timing(anim, { toValue: 0.15, duration: stars[i].duration * 0.5, useNativeDriver: true }),
+          Animated.timing(anim, { toValue: 0.12, duration: stars[i].duration * 0.5, useNativeDriver: true }),
         ]),
       );
       loop.start();
       return loop;
     });
     return () => loops.forEach(l => l.stop());
-  }, [isNight]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [showStars]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Rain / thunderstorm ────────────────────────────────────────────────────
 
@@ -321,7 +338,7 @@ export default function WeatherBackground({ lat, lon, timings, now }: Props) {
     };
   }, [condition]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Clouds — all non-clear, non-snow conditions ───────────────────────────
+  // ── Clouds — non-clear, non-snow ──────────────────────────────────────────
 
   useEffect(() => {
     if (!showClouds) return;
@@ -362,10 +379,10 @@ export default function WeatherBackground({ lat, lon, timings, now }: Props) {
 
     function doFlash() {
       Animated.sequence([
-        Animated.timing(flashAnim, { toValue: 0.42, duration: 70,  useNativeDriver: true }),
+        Animated.timing(flashAnim, { toValue: 0.40, duration: 70,  useNativeDriver: true }),
         Animated.timing(flashAnim, { toValue: 0,    duration: 80,  useNativeDriver: true }),
         Animated.delay(110),
-        Animated.timing(flashAnim, { toValue: 0.28, duration: 55,  useNativeDriver: true }),
+        Animated.timing(flashAnim, { toValue: 0.25, duration: 55,  useNativeDriver: true }),
         Animated.timing(flashAnim, { toValue: 0,    duration: 220, useNativeDriver: true }),
       ]).start(() => {
         timer = setTimeout(doFlash, 3000 + Math.random() * 6000);
@@ -399,26 +416,24 @@ export default function WeatherBackground({ lat, lon, timings, now }: Props) {
               />
             ))}
           </LinearGradient>
-          {/* Horizon glow — transparent→color→transparent, bottom third */}
+          {/* Horizon atmosphere glow — transparent → color → transparent */}
           <LinearGradient id="horizonGlow" x1={0} y1={0} x2={0} y2={1}>
-            <Stop offset="0%"   stopColor={horizonGlowColor} stopOpacity={0} />
-            <Stop offset="40%"  stopColor={horizonGlowColor} stopOpacity={1} />
-            <Stop offset="100%" stopColor={horizonGlowColor} stopOpacity={0} />
+            <Stop offset="0%"   stopColor={horizonColor} stopOpacity={0} />
+            <Stop offset="40%"  stopColor={horizonColor} stopOpacity={1} />
+            <Stop offset="100%" stopColor={horizonColor} stopOpacity={0} />
           </LinearGradient>
         </Defs>
         <Rect x={0} y={0} width={W} height={H} fill="url(#wxBase)" />
-
-        {/* Horizon atmosphere glow */}
+        {/* Subtle horizon atmosphere band */}
         <Rect x={0} y={H - horizonH} width={W} height={horizonH} fill="url(#horizonGlow)" />
-
         {/* Weather condition overlay tint */}
         {overlay.op > 0 && (
           <Rect x={0} y={0} width={W} height={H} fill={overlay.color} fillOpacity={overlay.op} />
         )}
       </Svg>
 
-      {/* ── Stars — predawn / evening / night ── */}
-      {isNight && stars.map((s, i) => (
+      {/* ── Stars — predawn / night only ── */}
+      {showStars && stars.map((s, i) => (
         <Animated.View
           key={`star-${i}`}
           style={{
@@ -435,35 +450,32 @@ export default function WeatherBackground({ lat, lon, timings, now }: Props) {
       ))}
 
       {/* ── Clear-day warm glow orbs ── */}
-      {condition === 'clear' && !isNight && (
+      {condition === 'clear' && !showStars && (
         <>
           <View style={[styles.orb, {
-            width: W * 0.75, height: W * 0.75,
-            borderRadius: W * 0.375,
-            top: -W * 0.18, left: W * 0.12,
-            backgroundColor: 'rgba(255,210,100,0.10)',
+            width: W * 0.70, height: W * 0.70,
+            borderRadius: W * 0.35,
+            top: -W * 0.16, left: W * 0.15,
+            backgroundColor: 'rgba(255,210,100,0.08)',
           }]} />
           <View style={[styles.orb, {
-            width: W * 0.55, height: W * 0.55,
-            borderRadius: W * 0.275,
-            top: W * 0.25, right: -W * 0.12,
-            backgroundColor: 'rgba(255,170,50,0.07)',
+            width: W * 0.50, height: W * 0.50,
+            borderRadius: W * 0.25,
+            top: W * 0.22, right: -W * 0.10,
+            backgroundColor: 'rgba(255,170,50,0.05)',
           }]} />
         </>
       )}
 
-      {/* ── Drifting clouds — cloudy / fog / rain / thunderstorm ── */}
+      {/* ── Drifting clouds — organic SVG shapes ── */}
       {showClouds && clouds.map((c, i) => (
         <Animated.View
           key={`cloud-${i}`}
           style={{
-            position:        'absolute',
-            top:             c.y,
-            width:           c.w,
-            height:          c.h,
-            borderRadius:    c.h / 2,
-            backgroundColor: 'rgba(200,215,235,1)',
-            opacity:         c.opacity,
+            position: 'absolute',
+            top:      c.y,
+            width:    c.w,
+            height:   c.h,
             transform: [{
               translateX: cloudAnims[i].interpolate({
                 inputRange:  [0, 1],
@@ -471,7 +483,14 @@ export default function WeatherBackground({ lat, lon, timings, now }: Props) {
               }),
             }],
           }}
-        />
+        >
+          <Svg width={c.w} height={c.h} viewBox="0 0 200 80">
+            <Path
+              d={CLOUD_SHAPES[c.shape]}
+              fill={`rgba(210,220,235,${c.opacity})`}
+            />
+          </Svg>
+        </Animated.View>
       ))}
 
       {/* ── Rain drops ── */}
@@ -484,7 +503,7 @@ export default function WeatherBackground({ lat, lon, timings, now }: Props) {
             top:             0,
             width:           d.w,
             height:          d.h,
-            backgroundColor: 'rgba(180,210,255,0.88)',
+            backgroundColor: 'rgba(180,210,255,0.85)',
             borderRadius:    1,
             opacity:         d.opacity,
             transform: [
@@ -511,7 +530,7 @@ export default function WeatherBackground({ lat, lon, timings, now }: Props) {
             width:           f.r * 2,
             height:          f.r * 2,
             borderRadius:    f.r,
-            backgroundColor: 'rgba(255,255,255,0.94)',
+            backgroundColor: 'rgba(255,255,255,0.92)',
             opacity:         f.opacity,
             transform: [
               {
@@ -526,7 +545,7 @@ export default function WeatherBackground({ lat, lon, timings, now }: Props) {
         />
       ))}
 
-      {/* ── Fog pulsing haze ── */}
+      {/* ── Fog pulsing hazes ── */}
       {condition === 'fog' && fog.map((layer, i) => (
         <Animated.View
           key={`fog-${i}`}
@@ -540,7 +559,7 @@ export default function WeatherBackground({ lat, lon, timings, now }: Props) {
             backgroundColor: 'rgba(215,228,242,0.9)',
             opacity:         fogAnims[i].interpolate({
               inputRange:  [0, 1],
-              outputRange: [0.04, 0.11],
+              outputRange: [0.04, 0.12],
             }),
           }}
         />

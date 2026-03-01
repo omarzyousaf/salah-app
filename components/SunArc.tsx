@@ -1,11 +1,12 @@
 /**
  * SunArc — hero sun/moon arc for the Prayer Times screen.
  *
- * - Full screen width; arc fraction 0 = Fajr, 1 = Maghrib
- * - Thin elegant arc line with gradient
- * - Glowing orb (sun during day, crescent moon at night) with pulse animation
- * - Fajr / Maghrib endpoint labels only — no clutter on the arc
- * - Twinkling stars in the arc viewport during night
+ * - Tall dome (≥ 280 px on most phones); arc fraction 0 = Fajr, 1 = Maghrib
+ * - SOLID white line from Fajr to current orb position (past portion)
+ * - DASHED white line from current position to Maghrib (future portion)
+ * - Tight glowing orb (sun: #FFD700, moon: #E8E8F0) with subtle pulse
+ * - Fajr / Maghrib endpoint labels — fontWeight 300, opacity 0.6
+ * - Star dots during night, inside the arc viewport
  */
 
 import { useEffect, useRef, useState } from 'react';
@@ -14,7 +15,7 @@ import Svg, { Circle, Defs, G, LinearGradient, Path, Stop } from 'react-native-s
 
 import { PrayerTimings, formatTime, toMinutes } from '@/services/prayerTimes';
 
-// ─── Animated SVG circle ──────────────────────────────────────────────────────
+// ─── Animated SVG primitives ──────────────────────────────────────────────────
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -31,17 +32,17 @@ function easeOut(t: number): number {
   return 1 - Math.pow(1 - t, 3);
 }
 
-/** Deterministic pseudo-random — no Math.random in render. */
+/** Deterministic pseudo-random — stable across renders. */
 function pr(seed: number): number {
   const x = Math.sin(seed + 1) * 10000;
   return x - Math.floor(x);
 }
 
 function buildArcStars(W: number, arcH: number) {
-  return Array.from({ length: 20 }, (_, i) => ({
+  return Array.from({ length: 22 }, (_, i) => ({
     x: pr(i * 7 + 0) * W,
-    y: pr(i * 7 + 1) * arcH * 0.90,
-    r: 0.6 + pr(i * 7 + 2) * 1.6,
+    y: pr(i * 7 + 1) * arcH * 0.88,
+    r: 0.5 + pr(i * 7 + 2) * 1.4,
   }));
 }
 
@@ -51,15 +52,15 @@ export default function SunArc({ timings, now }: Props) {
   const { width: screenWidth } = useWindowDimensions();
 
   // ── Geometry ────────────────────────────────────────────────────────────────
-  const PAD = 16;           // horizontal inset for the arc endpoints
+  const PAD = 20;            // horizontal inset for arc endpoints
   const W   = screenWidth;
   const Rx  = (W - PAD * 2) / 2;
-  const Ry  = Rx * 1.05;   // tall dome — 250-300 px on most phones
+  const Ry  = Rx * 1.2;    // tall dome → ~280-300 px on standard phones
   const cx  = W / 2;
-  const cy  = Ry + 24;     // breathing room at top
-  const H   = cy + 52;     // total SVG height; extra for label row below
+  const cy  = Ry + 28;     // breathing room above dome
+  const H   = cy + 56;     // total SVG height; room for endpoint labels below
 
-  // ── Fraction math — 0=Fajr, 1=Maghrib ──────────────────────────────────────
+  // ── Fraction math — 0 = Fajr endpoint, 1 = Maghrib endpoint ────────────────
   const fajrMin    = toMinutes(timings.Fajr);
   const sunriseMin = toMinutes(timings.Sunrise);
   const maghribMin = toMinutes(timings.Maghrib);
@@ -68,9 +69,9 @@ export default function SunArc({ timings, now }: Props) {
   const nowMin  = now.getHours() * 60 + now.getMinutes();
   const nowFrac = (nowMin - fajrMin) / span;
 
-  const isDaytime     = nowMin >= sunriseMin && nowMin < maghribMin;
-  const isAboveArc    = nowFrac >= 0 && nowFrac <= 1;
-  const isNight       = !isDaytime;
+  const isDaytime  = nowMin >= sunriseMin && nowMin < maghribMin;
+  const isAboveArc = nowFrac >= 0 && nowFrac <= 1;
+  const isNight    = !isDaytime;
 
   const clamped = Math.max(-0.06, Math.min(1.06, nowFrac));
 
@@ -82,7 +83,7 @@ export default function SunArc({ timings, now }: Props) {
     };
   }
 
-  // ── Intro animation — orb slides from Fajr to current position ──────────────
+  // ── Intro animation — orb sweeps from Fajr to current position ──────────────
   const introRef = useRef(false);
   const [dispFrac, setDispFrac] = useState(isAboveArc ? -0.02 : clamped);
 
@@ -117,123 +118,113 @@ export default function SunArc({ timings, now }: Props) {
     setDispFrac(Math.max(-0.06, Math.min(1.06, nowFrac)));
   }, [nowFrac]);
 
-  // ── Glow pulse ──────────────────────────────────────────────────────────────
+  // ── Glow pulse ───────────────────────────────────────────────────────────────
   const glowAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(glowAnim, { toValue: 1, duration: 1500, useNativeDriver: false }),
-        Animated.timing(glowAnim, { toValue: 0, duration: 1500, useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 1, duration: 2000, useNativeDriver: false }),
+        Animated.timing(glowAnim, { toValue: 0, duration: 2000, useNativeDriver: false }),
       ]),
     ).start();
   }, [glowAnim]);
 
-  const glowR1  = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 36] });
-  const glowOp1 = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.38, 0.0] });
-  const glowR2  = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [36, 58] });
-  const glowOp2 = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.14, 0.0] });
-  const glowR3  = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [58, 88] });
-  const glowOp3 = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.05, 0.0] });
+  // Tight, realistic glow — not a huge bloom
+  const glowR1  = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 22] });
+  const glowOp1 = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.30, 0.0] });
+  const glowR2  = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [24, 32] });
+  const glowOp2 = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.10, 0.0] });
 
-  // ── Derived geometry ────────────────────────────────────────────────────────
+  // ── Derived geometry ─────────────────────────────────────────────────────────
   const orbPos   = pt(dispFrac);
-  const arcPath  = `M ${cx - Rx} ${cy} A ${Rx} ${Ry} 0 0 1 ${cx + Rx} ${cy}`;
   const arcStars = buildArcStars(W, cy);
 
-  // ── Colors ──────────────────────────────────────────────────────────────────
-  const GOLD   = '#C8A96E';
-  const GOLD_B = '#F0C87A';
-  const WHITE  = '#FFFFFF';
+  // Safe fraction for SVG arc drawing — avoid degenerate zero-length arcs
+  const safeF    = Math.max(0.005, Math.min(0.995, dispFrac));
+  const ptOrbSvg = pt(safeF);
+  const ptFajr   = { x: cx - Rx, y: cy };
+  const ptMag    = { x: cx + Rx, y: cy };
 
-  // Arc line: soft white/silver at low opacity regardless of day/night
-  // Pre-compute gradient stops to avoid conditional JSX inside SVG children
-  type ArcStop = { offset: string; color: string; opacity: number };
-  const arcStops: ArcStop[] = isNight
-    ? [
-        { offset: '0%',   color: '#8090C0', opacity: 0.18 },
-        { offset: '50%',  color: '#A0B0D8', opacity: 0.28 },
-        { offset: '100%', color: '#8090C0', opacity: 0.18 },
-      ]
-    : [
-        { offset: '0%',   color: WHITE, opacity: 0.15 },
-        { offset: '35%',  color: WHITE, opacity: 0.32 },
-        { offset: '65%',  color: WHITE, opacity: 0.32 },
-        { offset: '100%', color: WHITE, opacity: 0.15 },
-      ];
+  // Past portion (solid): Fajr → current orb
+  const solidPath = [
+    `M ${ptFajr.x.toFixed(2)} ${ptFajr.y.toFixed(2)}`,
+    `A ${Rx.toFixed(2)} ${Ry.toFixed(2)} 0 0 1`,
+    `${ptOrbSvg.x.toFixed(2)} ${ptOrbSvg.y.toFixed(2)}`,
+  ].join(' ');
+
+  // Future portion (dashed): current orb → Maghrib
+  const dashedPath = [
+    `M ${ptOrbSvg.x.toFixed(2)} ${ptOrbSvg.y.toFixed(2)}`,
+    `A ${Rx.toFixed(2)} ${Ry.toFixed(2)} 0 0 1`,
+    `${ptMag.x.toFixed(2)} ${ptMag.y.toFixed(2)}`,
+  ].join(' ');
+
+  // ── Colors ───────────────────────────────────────────────────────────────────
+  const SUN_COLOR  = '#FFD700';
+  const MOON_COLOR = '#E8E8F0';
+  const orbColor   = isDaytime ? SUN_COLOR : MOON_COLOR;
 
   return (
     <View style={{ width: W, height: H }}>
       <Svg width={W} height={H}>
-        <Defs>
-          {/* Arc line gradient: dawn→gold→gold→dawn (daytime) or dim blue (night) */}
-          <LinearGradient
-            id="arcLine"
-            x1={cx - Rx} y1={cy}
-            x2={cx + Rx} y2={cy}
-            gradientUnits="userSpaceOnUse"
-          >
-            {arcStops.map((s, i) => (
-              <Stop key={i} offset={s.offset} stopColor={s.color} stopOpacity={s.opacity} />
-            ))}
-          </LinearGradient>
-        </Defs>
 
-        {/* ── Stars (night / predawn) ── */}
+        {/* ── Star dots (night only) ── */}
         {isNight && arcStars.map((s, i) => (
           <Circle
             key={`as-${i}`}
             cx={s.x}
             cy={s.y}
             r={s.r}
-            fill="rgba(255,255,255,0.65)"
+            fill="rgba(255,255,255,0.55)"
           />
         ))}
 
-        {/* ── Main arc line ── */}
+        {/* ── Past arc (solid) — Fajr to orb ── */}
         <Path
-          d={arcPath}
+          d={solidPath}
           fill="none"
-          stroke="url(#arcLine)"
-          strokeWidth={1.2}
+          stroke="rgba(255,255,255,0.45)"
+          strokeWidth={1.5}
           strokeLinecap="round"
         />
 
-        {/* ── Outer glow rings — white bloom for both day and night ── */}
-        <AnimatedCircle
-          cx={orbPos.x} cy={orbPos.y}
-          r={glowR3}
-          fill={WHITE}
-          opacity={glowOp3}
+        {/* ── Future arc (dashed) — orb to Maghrib ── */}
+        <Path
+          d={dashedPath}
+          fill="none"
+          stroke="rgba(255,255,255,0.22)"
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeDasharray="8 6"
         />
+
+        {/* ── Glow rings (pulse animation) ── */}
         <AnimatedCircle
           cx={orbPos.x} cy={orbPos.y}
           r={glowR2}
-          fill={WHITE}
+          fill={orbColor}
           opacity={glowOp2}
         />
         <AnimatedCircle
           cx={orbPos.x} cy={orbPos.y}
           r={glowR1}
-          fill={WHITE}
+          fill={orbColor}
           opacity={glowOp1}
         />
 
-        {/* ── Orb: sun or crescent moon ── */}
+        {/* ── Orb ── */}
         {isDaytime ? (
           <>
-            {/* Sun halo */}
-            <Circle cx={orbPos.x} cy={orbPos.y} r={18}  fill={GOLD}   opacity={0.80} />
-            {/* Inner warm ring */}
-            <Circle cx={orbPos.x} cy={orbPos.y} r={11}  fill={GOLD}   opacity={0.92} />
-            {/* Bright core */}
-            <Circle cx={orbPos.x} cy={orbPos.y} r={7}   fill={GOLD_B} opacity={1}    />
+            {/* Sun: warm halo + bright core */}
+            <Circle cx={orbPos.x} cy={orbPos.y} r={14} fill={SUN_COLOR} opacity={0.35} />
+            <Circle cx={orbPos.x} cy={orbPos.y} r={9}  fill={SUN_COLOR} opacity={1.0}  />
           </>
         ) : (
-          /* Crescent moon (filled circle minus offset circle) */
+          /* Crescent moon: filled circle minus smaller offset circle */
           <G>
-            <Circle cx={orbPos.x}       cy={orbPos.y}       r={13}  fill="#C8D8F0"          opacity={0.92} />
-            <Circle cx={orbPos.x + 6.5} cy={orbPos.y - 4.0} r={10}  fill="rgba(0,2,18,0.92)" opacity={1}  />
+            <Circle cx={orbPos.x}       cy={orbPos.y}        r={8}  fill={MOON_COLOR}         opacity={0.92} />
+            <Circle cx={orbPos.x + 4.5} cy={orbPos.y - 2.5}  r={6}  fill="rgba(2,4,18,0.92)"  opacity={1}    />
           </G>
         )}
       </Svg>
@@ -243,7 +234,7 @@ export default function SunArc({ timings, now }: Props) {
         style={[
           StyleSheet.absoluteFill,
           styles.labels,
-          { top: cy + 10, paddingHorizontal: PAD - 4 },
+          { top: cy + 12, paddingHorizontal: PAD - 4 },
         ]}
         pointerEvents="none"
       >
@@ -269,15 +260,15 @@ const styles = StyleSheet.create({
     alignItems:     'flex-start',
   },
   epName: {
-    fontSize:      11,
-    fontWeight:    '500',
-    letterSpacing: 0.4,
-    color:         'rgba(255,255,255,0.72)',
+    fontSize:      13,
+    fontWeight:    '300',
+    letterSpacing: 0.3,
+    color:         'rgba(255,255,255,0.60)',
     marginBottom:  2,
   },
   epTime: {
-    fontSize:   10,
-    color:      'rgba(255,255,255,0.48)',
-    fontFamily: 'SpaceMono',
+    fontSize:      11,
+    fontWeight:    '300',
+    color:         'rgba(255,255,255,0.38)',
   },
 });
