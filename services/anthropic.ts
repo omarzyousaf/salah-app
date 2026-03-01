@@ -7,7 +7,7 @@
  * Features:
  *  • Persistent device_id from SecureStore via lib/deviceId
  *  • Local daily message count: warn UI at 15, soft-block at 20
- *  • Streaming SSE parsing — forwards content_block_delta events in real time
+ *  • Streaming SSE parsing with automatic non-streaming fallback for iOS
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,6 +19,15 @@ const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 const CHAT_ENDPOINT     = `${SUPABASE_URL}/functions/v1/chat`;
 
 const KEY_MSG_COUNT = 'salah_chat_daily'; // { date: string; count: number }
+
+// Cached within the app session after first detection
+let _streamingSupported: boolean | null = null;
+
+const AUTH_HEADERS = {
+  'Content-Type':  'application/json',
+  'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+  'apikey':        SUPABASE_ANON_KEY,
+};
 
 export const DAILY_LIMIT = 20;
 export const WARN_AT     = 15;
@@ -72,6 +81,29 @@ async function bumpCount(): Promise<void> {
   } catch {}
 }
 
+// ─── Non-streaming fallback ───────────────────────────────────────────────────
+
+async function fetchComplete(messages: ChatMessage[], device_id: string): Promise<string> {
+  const res = await fetch(CHAT_ENDPOINT, {
+    method:  'POST',
+    headers: AUTH_HEADERS,
+    body:    JSON.stringify({ messages, device_id, stream: false }),
+  });
+
+  if (!res.ok) {
+    let msg = 'Something went wrong. Please try again.';
+    try {
+      const body = (await res.json()) as { error?: string };
+      if (body.error) msg = body.error;
+    } catch {}
+    if (res.status === 429) msg = "You've reached today's message limit.";
+    throw new Error(msg);
+  }
+
+  const json = (await res.json()) as { text?: string };
+  return json.text ?? '';
+}
+
 // ─── Streaming chat ───────────────────────────────────────────────────────────
 
 export async function streamMessage(params: {
@@ -92,17 +124,24 @@ export async function streamMessage(params: {
   const device_id = await getDeviceId();
   await bumpCount();
 
-  // ── Fetch ────────────────────────────────────────────────────────────────────
+  // ── Non-streaming path (iOS / known-unsupported devices) ────────────────────
+  if (_streamingSupported === false) {
+    try {
+      const text = await fetchComplete(messages, device_id);
+      onComplete(text);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+    }
+    return;
+  }
+
+  // ── Attempt streaming ────────────────────────────────────────────────────────
   let res: Response;
   try {
     res = await fetch(CHAT_ENDPOINT, {
       method:  'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'apikey':        SUPABASE_ANON_KEY,
-      },
-      body: JSON.stringify({ messages, device_id }),
+      headers: AUTH_HEADERS,
+      body:    JSON.stringify({ messages, device_id }),
     });
   } catch {
     onError('No internet connection. Please check your network and try again.');
@@ -120,13 +159,24 @@ export async function streamMessage(params: {
     return;
   }
 
-  // ── SSE stream parsing ───────────────────────────────────────────────────────
+  // ── Check reader availability ────────────────────────────────────────────────
   const reader = res.body?.getReader();
   if (!reader) {
-    onError('Streaming is not supported on this device.');
+    // Streaming not supported on this device — remember for the session and
+    // fall back to a separate non-streaming request.
+    _streamingSupported = false;
+    try {
+      const text = await fetchComplete(messages, device_id);
+      onComplete(text);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+    }
     return;
   }
 
+  _streamingSupported = true;
+
+  // ── SSE stream parsing ───────────────────────────────────────────────────────
   const decoder  = new TextDecoder();
   let   buffer   = '';
   let   fullText = '';

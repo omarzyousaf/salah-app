@@ -4,8 +4,9 @@
  * Proxies requests from the Salah mobile app to the Anthropic Messages API
  * so the ANTHROPIC_API_KEY is never exposed in the client bundle.
  *
- * Request:  POST { messages: AnthropicMessage[], device_id: string }
- * Response: SSE stream (text/event-stream) — forward Anthropic's streaming response
+ * Request:  POST { messages: AnthropicMessage[], device_id: string, stream?: boolean }
+ * Response: SSE stream (text/event-stream) when stream=true (default)
+ *           JSON { text: string }          when stream=false
  *
  * Rate limit: 20 messages per device_id per UTC day (enforced via Postgres function).
  * Env secrets required:
@@ -76,6 +77,7 @@ interface AnthropicMessage {
 interface RequestBody {
   messages:  AnthropicMessage[];
   device_id: string;
+  stream?:   boolean; // default true; pass false for a single JSON response
 }
 
 // ─── Entry point ──────────────────────────────────────────────────────────────
@@ -99,7 +101,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return jsonResponse({ error: 'Invalid JSON body' }, 400);
   }
 
-  const { messages, device_id } = body;
+  const { messages, device_id, stream = true } = body;
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return jsonResponse({ error: '`messages` must be a non-empty array' }, 400);
@@ -154,17 +156,55 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return jsonResponse({ error: 'Service misconfigured — contact support' }, 500);
   }
 
-  // ── Forward to Anthropic (streaming) ──────────────────────────────────────
+  // ── Shared helper: call Anthropic ─────────────────────────────────────────
+  const anthropicHeaders = {
+    'x-api-key':         anthropicKey,
+    'anthropic-version': '2023-06-01',
+    'content-type':      'application/json',
+  };
+
+  // ── Non-streaming path ─────────────────────────────────────────────────────
+  if (!stream) {
+    let anthropicRes: Response;
+    try {
+      anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method:  'POST',
+        headers: anthropicHeaders,
+        body:    JSON.stringify({
+          model:      MODEL,
+          max_tokens: MAX_TOKENS,
+          system:     SYSTEM_PROMPT,
+          messages,
+          stream:     false,
+        }),
+      });
+    } catch (err) {
+      console.error('Anthropic fetch failed:', err);
+      return jsonResponse({ error: 'Failed to reach AI service' }, 502);
+    }
+
+    if (!anthropicRes.ok) {
+      const detail = await anthropicRes.text().catch(() => '');
+      console.error(`Anthropic ${anthropicRes.status}:`, detail);
+      if (anthropicRes.status === 401) return jsonResponse({ error: 'Invalid API key — check ANTHROPIC_API_KEY secret' }, 502);
+      if (anthropicRes.status === 429) return jsonResponse({ error: 'AI service is busy — please try again shortly' }, 503);
+      return jsonResponse({ error: 'Upstream AI error', status: anthropicRes.status }, 502);
+    }
+
+    const json = await anthropicRes.json() as {
+      content?: Array<{ type: string; text: string }>;
+    };
+    const text = json.content?.find(b => b.type === 'text')?.text ?? '';
+    return jsonResponse({ text });
+  }
+
+  // ── Streaming path ─────────────────────────────────────────────────────────
   let anthropicRes: Response;
   try {
     anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key':         anthropicKey,
-        'anthropic-version': '2023-06-01',
-        'content-type':      'application/json',
-      },
-      body: JSON.stringify({
+      method:  'POST',
+      headers: anthropicHeaders,
+      body:    JSON.stringify({
         model:      MODEL,
         max_tokens: MAX_TOKENS,
         system:     SYSTEM_PROMPT,
@@ -177,22 +217,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return jsonResponse({ error: 'Failed to reach AI service' }, 502);
   }
 
-  // ── Handle non-200 from Anthropic ─────────────────────────────────────────
   if (!anthropicRes.ok) {
     const detail = await anthropicRes.text().catch(() => '');
     console.error(`Anthropic ${anthropicRes.status}:`, detail);
-
-    if (anthropicRes.status === 401) {
-      return jsonResponse({ error: 'Invalid API key — check ANTHROPIC_API_KEY secret' }, 502);
-    }
-    if (anthropicRes.status === 429) {
-      return jsonResponse({ error: 'AI service is busy — please try again shortly' }, 503);
-    }
+    if (anthropicRes.status === 401) return jsonResponse({ error: 'Invalid API key — check ANTHROPIC_API_KEY secret' }, 502);
+    if (anthropicRes.status === 429) return jsonResponse({ error: 'AI service is busy — please try again shortly' }, 503);
     return jsonResponse({ error: 'Upstream AI error', status: anthropicRes.status }, 502);
   }
 
-  // ── Pipe Anthropic's SSE stream straight to the client ────────────────────
-  // The client receives Server-Sent Events and parses content_block_delta events.
+  // Pipe Anthropic's SSE stream straight to the client.
   // X-Accel-Buffering: no disables nginx/proxy buffering so chunks arrive in real time.
   return new Response(anthropicRes.body, {
     status: 200,
