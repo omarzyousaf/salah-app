@@ -11,7 +11,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, StyleSheet, useWindowDimensions, View } from 'react-native';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Rect, Stop, RadialGradient } from 'react-native-svg';
 
 import { PrayerTimings, toMinutes } from '@/services/prayerTimes';
 import { WeatherCondition, fetchWeather } from '@/services/weather';
@@ -61,10 +61,11 @@ type GradStop = { off: number; color: string };
 
 const SKY: Record<Period, GradStop[]> = {
   predawn: [
-    { off: 0,    color: '#030710' },
-    { off: 0.40, color: '#0A1230' },
-    { off: 0.75, color: '#111840' },
-    { off: 1,    color: '#0C1235' },
+    { off: 0,    color: '#010408' },
+    { off: 0.28, color: '#060D24' },
+    { off: 0.55, color: '#0C1838' },
+    { off: 0.78, color: '#12203F' },
+    { off: 1,    color: '#1A2B4A' },
   ],
   sunrise: [
     { off: 0,    color: '#080C22' },
@@ -74,19 +75,22 @@ const SKY: Record<Period, GradStop[]> = {
     { off: 1,    color: '#F5A050' },
   ],
   morning: [
-    { off: 0,   color: '#1575C8' },
-    { off: 0.5, color: '#38A8DC' },
-    { off: 1,   color: '#8ACDEE' },
+    { off: 0,    color: '#0D5EB0' },
+    { off: 0.40, color: '#2090D0' },
+    { off: 0.75, color: '#55B8E8' },
+    { off: 1,    color: '#90D4F0' },
   ],
   midday: [
-    { off: 0,   color: '#0868C5' },
-    { off: 0.5, color: '#1595E0' },
-    { off: 1,   color: '#52C0F0' },
+    { off: 0,    color: '#0660BE' },
+    { off: 0.45, color: '#1488D8' },
+    { off: 0.80, color: '#40B0EE' },
+    { off: 1,    color: '#70CCF8' },
   ],
   afternoon: [
-    { off: 0,   color: '#0E65B5' },
-    { off: 0.5, color: '#2588C5' },
-    { off: 1,   color: '#68B5D8' },
+    { off: 0,    color: '#0A58A8' },
+    { off: 0.45, color: '#2080C0' },
+    { off: 0.80, color: '#58AAD4' },
+    { off: 1,    color: '#85C4E0' },
   ],
   sunset: [
     { off: 0,    color: '#150830' },
@@ -96,15 +100,18 @@ const SKY: Record<Period, GradStop[]> = {
     { off: 1,    color: '#F5A545' },
   ],
   evening: [
-    { off: 0,    color: '#060512' },
-    { off: 0.38, color: '#160A38' },
-    { off: 0.70, color: '#250F58' },
-    { off: 1,    color: '#180D40' },
+    { off: 0,    color: '#040310' },
+    { off: 0.30, color: '#100828' },
+    { off: 0.58, color: '#1C0E42' },
+    { off: 0.82, color: '#20144E' },
+    { off: 1,    color: '#2A1C5A' },
   ],
   night: [
-    { off: 0,   color: '#020408' },
-    { off: 0.5, color: '#050A18' },
-    { off: 1,   color: '#080E25' },
+    { off: 0,    color: '#010206' },
+    { off: 0.30, color: '#03060F' },
+    { off: 0.60, color: '#050B1C' },
+    { off: 0.85, color: '#080F24' },
+    { off: 1,    color: '#0D1530' },
   ],
 };
 
@@ -133,7 +140,7 @@ function pr(seed: number): number {
 
 // ─── Particle config builders ─────────────────────────────────────────────────
 
-const N_STARS  = 32;
+const N_STARS  = 48;
 const N_RAIN   = 30;
 const N_SNOW   = 24;
 const N_CLOUDS = 6;
@@ -211,9 +218,18 @@ export default function WeatherBackground({ lat, lon, timings, now }: Props) {
   const nowMin      = now.getHours() * 60 + now.getMinutes();
   const period      = getPeriod(timings, nowMin);
   const isNight     = period === 'predawn' || period === 'evening' || period === 'night';
+  const isSunEvent  = period === 'sunrise' || period === 'sunset';
   const gradStops   = SKY[period];
   const overlay     = getOverlay(condition);
   const showClouds  = !!condition && condition !== 'clear' && condition !== 'snow';
+
+  // Horizon glow: warm for sunrise/sunset, cool blue for day, subtle indigo for night
+  const horizonGlowColor = isSunEvent
+    ? 'rgba(255,140,60,0.22)'
+    : isNight
+      ? 'rgba(40,55,120,0.30)'
+      : 'rgba(80,160,220,0.18)';
+  const horizonH = H * 0.38;
 
   // ── Stable particle configs ────────────────────────────────────────────────
 
@@ -383,8 +399,17 @@ export default function WeatherBackground({ lat, lon, timings, now }: Props) {
               />
             ))}
           </LinearGradient>
+          {/* Horizon glow — transparent→color→transparent, bottom third */}
+          <LinearGradient id="horizonGlow" x1={0} y1={0} x2={0} y2={1}>
+            <Stop offset="0%"   stopColor={horizonGlowColor} stopOpacity={0} />
+            <Stop offset="40%"  stopColor={horizonGlowColor} stopOpacity={1} />
+            <Stop offset="100%" stopColor={horizonGlowColor} stopOpacity={0} />
+          </LinearGradient>
         </Defs>
         <Rect x={0} y={0} width={W} height={H} fill="url(#wxBase)" />
+
+        {/* Horizon atmosphere glow */}
+        <Rect x={0} y={H - horizonH} width={W} height={horizonH} fill="url(#horizonGlow)" />
 
         {/* Weather condition overlay tint */}
         {overlay.op > 0 && (

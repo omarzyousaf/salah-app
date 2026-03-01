@@ -38,10 +38,10 @@ function pr(seed: number): number {
 }
 
 function buildArcStars(W: number, arcH: number) {
-  return Array.from({ length: 14 }, (_, i) => ({
+  return Array.from({ length: 20 }, (_, i) => ({
     x: pr(i * 7 + 0) * W,
-    y: pr(i * 7 + 1) * arcH * 0.92,
-    r: 0.7 + pr(i * 7 + 2) * 1.8,
+    y: pr(i * 7 + 1) * arcH * 0.90,
+    r: 0.6 + pr(i * 7 + 2) * 1.6,
   }));
 }
 
@@ -51,13 +51,13 @@ export default function SunArc({ timings, now }: Props) {
   const { width: screenWidth } = useWindowDimensions();
 
   // ── Geometry ────────────────────────────────────────────────────────────────
-  const PAD = 24;           // horizontal inset for the arc endpoints
+  const PAD = 16;           // horizontal inset for the arc endpoints
   const W   = screenWidth;
   const Rx  = (W - PAD * 2) / 2;
-  const Ry  = Rx * 0.62;   // taller arc = more visual presence
+  const Ry  = Rx * 1.05;   // tall dome — 250-300 px on most phones
   const cx  = W / 2;
-  const cy  = Ry + 18;     // small top breathing room
-  const H   = cy + 48;     // total SVG height; extra for label row below
+  const cy  = Ry + 24;     // breathing room at top
+  const H   = cy + 52;     // total SVG height; extra for label row below
 
   // ── Fraction math — 0=Fajr, 1=Maghrib ──────────────────────────────────────
   const fajrMin    = toMinutes(timings.Fajr);
@@ -129,10 +129,12 @@ export default function SunArc({ timings, now }: Props) {
     ).start();
   }, [glowAnim]);
 
-  const glowR1  = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [14, 26] });
-  const glowOp1 = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.42, 0.0] });
-  const glowR2  = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [26, 42] });
-  const glowOp2 = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.16, 0.0] });
+  const glowR1  = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [20, 36] });
+  const glowOp1 = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.38, 0.0] });
+  const glowR2  = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [36, 58] });
+  const glowOp2 = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.14, 0.0] });
+  const glowR3  = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [58, 88] });
+  const glowOp3 = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.05, 0.0] });
 
   // ── Derived geometry ────────────────────────────────────────────────────────
   const orbPos   = pt(dispFrac);
@@ -142,22 +144,22 @@ export default function SunArc({ timings, now }: Props) {
   // ── Colors ──────────────────────────────────────────────────────────────────
   const GOLD   = '#C8A96E';
   const GOLD_B = '#F0C87A';
-  const DAWN   = '#E87838';
-  const MOON   = '#B8C8E8';
+  const WHITE  = '#FFFFFF';
 
+  // Arc line: soft white/silver at low opacity regardless of day/night
   // Pre-compute gradient stops to avoid conditional JSX inside SVG children
   type ArcStop = { offset: string; color: string; opacity: number };
   const arcStops: ArcStop[] = isNight
     ? [
-        { offset: '0%',   color: '#2A3870', opacity: 0.45 },
-        { offset: '50%',  color: '#3C4E90', opacity: 0.55 },
-        { offset: '100%', color: '#2A3870', opacity: 0.45 },
+        { offset: '0%',   color: '#8090C0', opacity: 0.18 },
+        { offset: '50%',  color: '#A0B0D8', opacity: 0.28 },
+        { offset: '100%', color: '#8090C0', opacity: 0.18 },
       ]
     : [
-        { offset: '0%',   color: DAWN, opacity: 0.85 },
-        { offset: '35%',  color: GOLD, opacity: 1.0  },
-        { offset: '65%',  color: GOLD, opacity: 1.0  },
-        { offset: '100%', color: DAWN, opacity: 0.85 },
+        { offset: '0%',   color: WHITE, opacity: 0.15 },
+        { offset: '35%',  color: WHITE, opacity: 0.32 },
+        { offset: '65%',  color: WHITE, opacity: 0.32 },
+        { offset: '100%', color: WHITE, opacity: 0.15 },
       ];
 
   return (
@@ -193,21 +195,27 @@ export default function SunArc({ timings, now }: Props) {
           d={arcPath}
           fill="none"
           stroke="url(#arcLine)"
-          strokeWidth={1.5}
+          strokeWidth={1.2}
           strokeLinecap="round"
         />
 
-        {/* ── Outer glow rings ── */}
+        {/* ── Outer glow rings — white bloom for both day and night ── */}
+        <AnimatedCircle
+          cx={orbPos.x} cy={orbPos.y}
+          r={glowR3}
+          fill={WHITE}
+          opacity={glowOp3}
+        />
         <AnimatedCircle
           cx={orbPos.x} cy={orbPos.y}
           r={glowR2}
-          fill={isDaytime ? GOLD : MOON}
+          fill={WHITE}
           opacity={glowOp2}
         />
         <AnimatedCircle
           cx={orbPos.x} cy={orbPos.y}
           r={glowR1}
-          fill={isDaytime ? GOLD : MOON}
+          fill={WHITE}
           opacity={glowOp1}
         />
 
@@ -215,15 +223,17 @@ export default function SunArc({ timings, now }: Props) {
         {isDaytime ? (
           <>
             {/* Sun halo */}
-            <Circle cx={orbPos.x} cy={orbPos.y} r={13}  fill={GOLD}   opacity={0.92} />
+            <Circle cx={orbPos.x} cy={orbPos.y} r={18}  fill={GOLD}   opacity={0.80} />
+            {/* Inner warm ring */}
+            <Circle cx={orbPos.x} cy={orbPos.y} r={11}  fill={GOLD}   opacity={0.92} />
             {/* Bright core */}
-            <Circle cx={orbPos.x} cy={orbPos.y} r={7.5} fill={GOLD_B} opacity={1}    />
+            <Circle cx={orbPos.x} cy={orbPos.y} r={7}   fill={GOLD_B} opacity={1}    />
           </>
         ) : (
           /* Crescent moon (filled circle minus offset circle) */
           <G>
-            <Circle cx={orbPos.x}       cy={orbPos.y}       r={11}  fill={MOON}             opacity={0.92} />
-            <Circle cx={orbPos.x + 5.5} cy={orbPos.y - 3.5} r={8.5} fill="rgba(0,2,18,0.92)" opacity={1}  />
+            <Circle cx={orbPos.x}       cy={orbPos.y}       r={13}  fill="#C8D8F0"          opacity={0.92} />
+            <Circle cx={orbPos.x + 6.5} cy={orbPos.y - 4.0} r={10}  fill="rgba(0,2,18,0.92)" opacity={1}  />
           </G>
         )}
       </Svg>

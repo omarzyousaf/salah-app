@@ -26,6 +26,7 @@ import {
   Platform,
   RefreshControl,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -218,25 +219,24 @@ const cd = StyleSheet.create({
     width:      68,
   },
   digit: {
-    fontSize:      54,
-    fontFamily:    'SpaceMono',
-    fontWeight:    '300',
+    fontSize:      62,
+    fontWeight:    '200',
     color:         TEXT_PRIMARY,
-    letterSpacing: -1,
-    lineHeight:    58,
+    letterSpacing: -2,
+    lineHeight:    66,
   },
   unitLabel: {
     fontSize:      9,
-    letterSpacing: 2,
+    letterSpacing: 3,
     color:         TEXT_DIM,
-    marginTop:     2,
+    marginTop:     3,
   },
   colon: {
-    fontSize:      44,
-    fontFamily:    'SpaceMono',
+    fontSize:      48,
+    fontWeight:    '200',
     color:         TEXT_DIM,
-    marginBottom:  12,
-    lineHeight:    58,
+    marginBottom:  14,
+    lineHeight:    66,
   },
 });
 
@@ -492,6 +492,7 @@ export default function PrayerTimesScreen() {
   return (
     // Root is black so any tiny gap before WeatherBackground renders is safe
     <View style={styles.root}>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
 
       {/* Full-screen animated weather sky */}
       <WeatherBackground
